@@ -51,6 +51,10 @@
           case 'O': this.entities.push(new G.Mine(s.x, s.y)); break;
           case 'U': this.entities.push(new G.SiteLauncher(s.x, s.y)); this.launchersLeft++; break;
           case 'Q': { const q = new G.Soldier(s.x, s.y); q.rpg = true; q.hp = 4; q.score = 200; this.entities.push(q); break; }
+          case 'C': this.entities.push(new G.AtomCrate(s.x, s.y)); break;
+          case 'F': this.entities.push(new G.Centrifuge(s.x, s.y)); break;
+          case 'W': this.entities.push(new G.Laser(s.x, s.y, this.level)); break;
+          case 'I': this.entities.push(new G.Scientist(s.x, s.y)); break;
           case 'V': this.entities.push(new G.Cart(s.x, s.y)); break;
           case 'J': this.depot = new G.Depot(s.x, s.y); this.entities.push(this.depot); break;
           case 'Z': this.boss = new G.TollBooth(s.x, s.y); this.entities.push(this.boss); break;
@@ -61,6 +65,11 @@
       }
       if (!this.player) this.player = new G.Player(32, 100);
       this.strikes = m.objective.strikes || 0; this.strikeQ = [];
+      this.hasBomb = false; this.bombCrate = null; this.geigerT = 0; this.exitNagT = 0;
+      if (m.objective.type === 'search') {
+        const crates = this.entities.filter(e => e.kind === 'atomcrate' && e.x > (m.objective.minCol || 0) * T);
+        this.bombCrate = G.pick(crates); if (this.bombCrate) this.bombCrate.hasBomb = true;
+      }
       this.player.ammo.stinger = 0;
       this.camX = 0;
       this.state = 'briefing';
@@ -95,7 +104,8 @@
     },
     reachExit() {
       const t = this.mission.objective.type;
-      if (t === 'reach' || (t === 'demolish' && this.planted)) this.winMission();
+      if (t === 'search' && !this.hasBomb && this.exitNagT <= 0) { this.exitNagT = 3; this.floatText(this.player.x, this.player.y - 10, 'FIND THE BOMB FIRST', '#ff6060'); }
+      if (t === 'reach' || (t === 'demolish' && this.planted) || (t === 'search' && this.hasBomb)) this.winMission();
     },
     plantCharge() {
       const o = this.mission.objective;
@@ -110,7 +120,13 @@
       this.radio(G.pick(G.PRESIDENT_BARKS.launcher));
       if (this.launchersLeft <= 0) this.pending = { t: 1.2, fn: () => this.winMission() };
     },
-    civilianHit() { this.radio(G.pick(G.PRESIDENT_BARKS.civilian)); },
+    civilianHit(kind) { this.radio(G.pick(G.PRESIDENT_BARKS[kind === 'scientist' ? 'scientist' : 'civilian'])); },
+    bombFound() {
+      this.hasBomb = true; this.score += 3000; G.Audio.play('win'); this.shake = 4;
+      this.floatText(this.player.x + 5, this.player.y - 14, 'BOMB CORE SECURED!', '#ffd23f');
+      this.radioQ = []; this.radioCur = null;
+      (this.mission.foundRadio || []).forEach(l => this.radio(l));
+    },
     // ---------- БОСС ----------
     cutscene(lines) {
       if (!lines || !lines.length) return;
@@ -275,6 +291,16 @@
         if (this.timer <= 10 && Math.floor(this.timer) !== Math.floor(this.timer + dt)) G.Audio.play('alarm');
         if (this.timer <= 0) this.failMission('Missile launched! Too late.');
       }
+      // Счётчик Гейгера
+      this.exitNagT -= dt;
+      if (o.type === 'search' && !this.hasBomb) {
+        const tgt = this.entities.find(e => e.kind === 'bombitem') || this.bombCrate;
+        if (tgt) {
+          this.geigerD = Math.hypot(tgt.x - this.player.x, tgt.y - this.player.y);
+          this.geigerT -= dt;
+          if (this.geigerT <= 0 && this.geigerD < 700) { G.Audio.play('tick'); this.geigerT = 0.05 + this.geigerD / 450 * (0.6 + Math.random() * 0.8); }
+        }
+      }
       // Побег из рушащегося тоннеля
       if (o.type === 'demolish' && this.planted && this.state === 'play') {
         this.escapeT -= dt; this.rockT -= dt;
@@ -416,6 +442,14 @@
       let obj = '';
       if (o.type === 'reach') obj = 'REACH THE FLAG →';
       if (o.type === 'boss') obj = 'SHUT DOWN THE TOLLBOOTH →';
+      if (o.type === 'search') {
+        obj = this.hasBomb ? 'EXTRACT THE BOMB →' : 'FIND THE BOMB';
+        if (!this.hasBomb) {
+          const lvl = Math.max(0, Math.min(6, Math.round(6 - (this.geigerD || 999) / 110)));
+          G.text(ctx, 'RAD', W - 66, 16, { size: 7, color: '#9fe870' });
+          for (let i = 0; i < 6; i++) { ctx.fillStyle = i < lvl ? (i > 3 ? '#ff4040' : i > 1 ? '#ffd23f' : '#9fe870') : '#333'; ctx.fillRect(W - 46 + i * 7, 17, 5, 6); }
+        }
+      }
       if (o.type === 'demolish') {
         if (!this.planted) obj = 'PLANT C4 AT THE DEPOT →';
         else {

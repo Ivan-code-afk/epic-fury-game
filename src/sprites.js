@@ -166,6 +166,37 @@ G.SPR = {};
     r('#333', 2, 6, 10, 2); r('#333', 6, 8, 2, 2);                // пулемёт
   });
 
+  // ---------- УЧЁНЫЙ (мирный) ----------
+  const SCI = { helmet: '#3a2a1e', rim: '#3a2a1e', skin: '#d8a070', shirt: '#eeeeee', vest: '#d8d8d8', pants: '#555a60', boots: '#222', gun: '#eeeeee', beard: '#3a2a1e' };
+  G.SPR.scientist = {};
+  frames.forEach(f => {
+    const base = soldier(SCI, f, false);
+    G.SPR.scientist[f] = mk(18, 20, (x, r) => { x.drawImage(base, 0, 0); const dy = f === 'crouch' ? 5 : 0; r('#111', 8, 4 + dy, 3, 1); r('#9ad0f0', 9, 5 + dy, 1, 1); r('#c9a050', 13, 8 + dy, 4, 5); });
+  });
+
+  // ---------- ЯЩИК «PEACEFUL ATOM» ----------
+  G.SPR.atomCrate = mk(20, 18, (x, r) => {
+    r('#c9a227', 0, 0, 20, 18); r('#8a6a10', 0, 0, 20, 1); r('#8a6a10', 0, 17, 20, 1); r('#8a6a10', 0, 0, 1, 18); r('#8a6a10', 19, 0, 1, 18);
+    x.fillStyle = '#111'; x.beginPath(); x.arc(10, 9, 6, 0, 7); x.fill();
+    x.fillStyle = '#c9a227';
+    for (let i = 0; i < 3; i++) { const a = i * 2.094 + 0.52; x.beginPath(); x.moveTo(10, 9); x.arc(10, 9, 6, a, a + 1.05); x.closePath(); x.fill(); }
+    x.fillStyle = '#111'; x.beginPath(); x.arc(10, 9, 1.5, 0, 7); x.fill();
+  });
+
+  // ---------- ЯДЕРНЫЙ ЗАРЯД ----------
+  G.SPR.bombCore = mk(16, 16, (x, r) => {
+    x.fillStyle = '#5a6068'; x.beginPath(); x.arc(8, 8, 7, 0, 7); x.fill();
+    x.fillStyle = '#7a8088'; x.beginPath(); x.arc(6, 6, 3, 0, 7); x.fill();
+    r('#ffd23f', 6, 7, 4, 2); r('#ffd23f', 7, 6, 2, 4); r('#333', 3, 13, 10, 2);
+  });
+
+  // ---------- ЦЕНТРИФУГА ----------
+  G.SPR.centrifuge = [0, 1, 2].map(ph => mk(14, 32, (x, r) => {
+    r('#9aa0a6', 1, 2, 12, 26); r('#c8ccd0', 2, 2, 3, 26); r('#6c7278', 11, 2, 2, 26);
+    for (let i = 0; i < 4; i++) r('#4a5058', 1, 4 + ((i * 7 + ph * 2) % 26), 12, 1);
+    r('#555', 0, 0, 14, 3); r('#555', 0, 28, 14, 4); r('#6f6', 5, 29, 4, 1);
+  }));
+
   // ---------- РАКЕТНАЯ ТЕЛЕЖКА НА РЕЛЬСАХ ----------
   G.SPR.cart = mk(42, 18, (x, r) => {
     r('#5a5248', 1, 9, 40, 5); r('#3a342c', 1, 13, 40, 1);

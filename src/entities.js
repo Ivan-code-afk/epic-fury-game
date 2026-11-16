@@ -626,6 +626,146 @@
     },
   };
 
+  // Ящик PEACEFUL ATOM: внутри бомба (в одном), бонус или шутка
+  G.AtomCrate = function (x, y) {
+    Enemy.call(this, { kind: 'atomcrate', x: x - 2, y: y - 2, w: 20, h: 18, hp: 3, hasBomb: false });
+  };
+  G.AtomCrate.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.AtomCrate.prototype, {
+    kill(g) {
+      this.dead = true; this.remove = true;
+      for (let i = 0; i < 10; i++) g.particles.push(new G.Particle(cx(this), cy(this), (Math.random() - 0.5) * 160, -Math.random() * 180, 0.7, '#c9a227', 3, 1));
+      G.Audio.play('explode');
+      if (this.hasBomb) { g.entities.push(new G.BombItem(this.x + 2, this.y)); return; }
+      const roll = Math.random();
+      if (roll < 0.25) g.entities.push(new G.Pickup('H', this.x, this.y));
+      else if (roll < 0.4) g.entities.push(new G.Pickup('G', this.x, this.y));
+      else g.floatText(cx(this), this.y - 4, G.pick(G.CRATE_JOKES), '#ffd23f');
+    },
+    update(dt) { this.flash -= dt; },
+    draw(ctx, camX) {
+      let img = G.SPR.atomCrate;
+      if (this.flash > 0) img = G.tintCache(img, '#fff');
+      ctx.drawImage(img, Math.round(this.x - camX), Math.round(this.y));
+    },
+  });
+  G.CRATE_JOKES = ['JUST YOGURT', 'PISTACHIOS', '100% PEACEFUL', 'ENRICHED RICE', 'CARPETS', 'EMPTY. SUSPICIOUS.', 'SAFFRON', 'MORE CRATES'];
+
+  G.BombItem = function (x, y) { Object.assign(this, { kind: 'bombitem', x, y: y - 10, w: 16, h: 16, vx: 0, vy: -150, t: 0 }); };
+  G.BombItem.prototype = {
+    update(dt, g) {
+      this.t += dt; this.vy = Math.min(this.vy + C.GRAVITY * dt, 400);
+      g.level.move(this, dt); this.vx = 0;
+      if (!g.player.dead && overlap(this, g.player)) { this.remove = true; g.bombFound(); }
+    },
+    draw(ctx, camX) {
+      ctx.drawImage(G.SPR.bombCore, Math.round(this.x - camX), Math.round(this.y));
+      if (Math.floor(this.t * 4) % 2) G.text(ctx, 'BOMB!', Math.round(this.x - camX + 8), Math.round(this.y - 10), { size: 7, align: 'center', color: '#ff4040' });
+    },
+  };
+
+  // Центрифуга: если прострелить — выпускает ядовитый газ
+  G.Centrifuge = function (x, y) {
+    Enemy.call(this, { kind: 'centrifuge', x: x + 1, y: y + 16 - 32, w: 14, h: 32, hp: 3, score: 100, t: Math.random() * 3 });
+  };
+  G.Centrifuge.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.Centrifuge.prototype, {
+    update(dt, g) {
+      this.flash -= dt; this.t += dt;
+      if (this.dead) {
+        this.remove = true; G.Audio.play('explode');
+        for (let i = 0; i < 12; i++) g.particles.push(new G.Particle(cx(this), cy(this), (Math.random() - 0.5) * 180, -Math.random() * 160, 0.8, '#c8ccd0', 2, 1));
+        g.entities.push(new G.Gas(cx(this), this.y + 22));
+      }
+    },
+    draw(ctx, camX) {
+      let img = G.SPR.centrifuge[Math.floor(this.t * 12) % 3];
+      if (this.flash > 0) img = G.tintCache(img, '#fff');
+      ctx.drawImage(img, Math.round(this.x - camX), Math.round(this.y));
+    },
+  });
+
+  // Облако газа: ранит всех, кто внутри
+  G.Gas = function (x, y) { Object.assign(this, { kind: 'gas', x: x - 30, y: y - 26, w: 60, h: 40, life: 6, tick: 0 }); };
+  G.Gas.prototype = {
+    update(dt, g) {
+      this.life -= dt; this.tick -= dt;
+      if (this.life <= 0) { this.remove = true; return; }
+      if (!g.player.dead && overlap(this, g.player)) g.player.hurt(g, 1);
+      if (this.tick <= 0) {
+        this.tick = 0.5;
+        for (const e of g.entities) if (e.enemy && !e.dead && !e.civilian && e.kind !== 'atomcrate' && e.kind !== 'centrifuge' && overlap(this, e)) e.damage(g, 1);
+      }
+    },
+    draw(ctx, camX, g) {
+      const a = Math.min(1, this.life / 2) * 0.35;
+      ctx.fillStyle = 'rgba(120,230,80,' + a + ')';
+      for (let i = 0; i < 6; i++) {
+        const ox = Math.sin(g.time * 1.3 + i * 1.7) * 16, oy = Math.cos(g.time * 1.1 + i * 2.3) * 8;
+        ctx.beginPath(); ctx.arc(Math.round(this.x + 30 + ox - camX), Math.round(this.y + 22 + oy), 14 + (i % 3) * 3, 0, 7); ctx.fill();
+      }
+    },
+  };
+
+  // Лазерный барьер: включается и выключается по таймеру
+  G.Laser = function (x, y, level) {
+    const T = C.TILE, col = Math.floor(x / T);
+    let top = Math.floor(y / T), bot = top;
+    while (top > 0 && !level.isSolid(level.at(col, top - 1))) top--;
+    while (bot < level.h - 1 && !level.isSolid(level.at(col, bot + 1))) bot++;
+    Object.assign(this, { kind: 'laser', x: col * T + 7, y: top * T, w: 2, h: (bot - top + 1) * T, t: (col * 0.37) % 3 });
+  };
+  G.Laser.prototype = {
+    state() { const p = this.t % 3; return p < 1.4 ? 'on' : p > 2.55 ? 'warn' : 'off'; },
+    update(dt, g) {
+      this.t += dt;
+      if (this.state() === 'on' && !g.player.dead && overlap(this, g.player)) g.player.hurt(g, 1);
+    },
+    draw(ctx, camX, g) {
+      const x = Math.round(this.x - camX), st = this.state();
+      ctx.fillStyle = '#555'; ctx.fillRect(x - 3, this.y, 8, 4); ctx.fillRect(x - 3, this.y + this.h - 4, 8, 4);
+      ctx.fillStyle = st === 'off' ? '#400' : '#f22'; ctx.fillRect(x - 1, this.y + 3, 4, 1); ctx.fillRect(x - 1, this.y + this.h - 4, 4, 1);
+      if (st === 'on') {
+        ctx.fillStyle = 'rgba(255,40,40,.25)'; ctx.fillRect(x - 2, this.y + 4, 6, this.h - 8);
+        ctx.fillStyle = Math.floor(g.time * 30) % 2 ? '#ff5050' : '#ffb0b0'; ctx.fillRect(x, this.y + 4, 2, this.h - 8);
+      } else if (st === 'warn' && Math.floor(g.time * 16) % 2) {
+        ctx.fillStyle = 'rgba(255,60,60,.5)'; ctx.fillRect(x + 0.5, this.y + 4, 1, this.h - 8);
+      }
+    },
+  };
+
+  // Учёный: мирный, убегает от героя. Стрелять нельзя.
+  G.Scientist = function (x, y) {
+    Enemy.call(this, { kind: 'scientist', civilian: true, x: x + 3, y: y - 2, w: 10, h: 18, hp: 1, facing: 1, score: -300, anim: 0, panicT: 0 });
+  };
+  G.Scientist.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.Scientist.prototype, {
+    onKill(g) { this.vy = -150; g.civilianHit('scientist'); },
+    update(dt, g) {
+      if (this.dead) { this.vy += C.GRAVITY * dt; this.y += this.vy * dt; this.deadT = (this.deadT ?? 0.6) - dt; if (this.deadT <= 0) this.remove = true; return; }
+      const p = g.player, dx = cx(this) - cx(p);
+      const near = Math.abs(dx) < 300 && Math.abs((this.y + this.h) - (p.y + p.h)) < 24;
+      // под огнём учёный пригибается, и пули проходят над головой
+      const duck = near && G.Input.down('fire') && Math.sign(dx) === p.facing && !p.crouch;
+      if (duck !== !!this.duck) { this.duck = duck; this.y += duck ? 10 : -10; this.h = duck ? 8 : 18; }
+      if (this.duck) this.vx = 0;
+      else if (near && Math.abs(dx) < 130) { this.facing = Math.sign(dx) || 1; this.vx = this.facing * 70; this.panicT = 0.5; }
+      else this.vx = 0;
+      this.vy = Math.min(this.vy + C.GRAVITY * dt, 520);
+      const r = g.level.move(this, dt);
+      if (r.wall) this.vx = 0;
+      this.anim += Math.abs(this.vx) * dt * 0.3;
+      this.panicT -= dt;
+    },
+    draw(ctx, camX, g) {
+      const f = this.dead ? 'jump' : this.duck ? 'crouch' : this.vx ? Math.floor(this.anim) % 4 : 0;
+      if (this.dead) ctx.globalAlpha = Math.max(0, (this.deadT ?? 0.6) / 0.6);
+      drawSprite(ctx, G.SPR.scientist[f], this.x - camX - 4, this.y + this.h - 20, this.facing < 0);
+      ctx.globalAlpha = 1;
+      if (this.panicT > 0 && Math.floor(g.time * 6) % 2) G.text(ctx, '!', Math.round(cx(this) - camX), Math.round(this.y - 10), { size: 8, align: 'center', color: '#fff' });
+    },
+  });
+
   // Ракета РПГ (вражеская)
   G.EnemyRocket = function (x, y, dir) {
     Object.assign(this, { x, y, vx: dir * 60, dir, life: 3, owner: 'enemy' });

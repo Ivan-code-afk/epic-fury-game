@@ -47,6 +47,7 @@ G.Audio = (function () {
     hurt()    { tone(400, 0.25, 'sawtooth', 0.25, -330); },
     explode() { noise(0.6, 0.6, 700); tone(90, 0.5, 'triangle', 0.4, -60); },
     pickup()  { tone(660, 0.07, 'square', 0.2); tone(990, 0.1, 'square', 0.2, 0, 0.07); },
+    tick()    { noise(0.012, 0.25, 5000); },
     blip()    { tone(1200, 0.03, 'square', 0.06); },
     alarm()   { tone(880, 0.15, 'square', 0.15); tone(660, 0.15, 'square', 0.15, 0, 0.16); },
     buzz()    { tone(110, 0.25, 'sawtooth', 0.05, 10); },

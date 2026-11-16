@@ -66,6 +66,7 @@ G.Level.fromSpec = function (spec) {
 
 G.Level.prototype = {
   at(tx, ty) {
+    if (tx !== tx || ty !== ty) return '.';   // NaN-защита
     if (tx < 0 || tx >= this.w) return 'c';     // стены по краям
     if (ty < 0) return '.';
     if (ty >= this.h) return '.';
@@ -210,6 +211,7 @@ G.Backgrounds = {
     desert: { sky: ['#f6b26b', '#ffd59a', '#ffe9c4'], sun: '#fff3c0', far: '#c99a6a', near: '#b3824f' },
     gulf:   { sky: ['#4a90c8', '#8cc4e8', '#d8eef8'], sun: '#fffbe0', far: '#7a9ab0', near: '#5c7f99' },
     city:   { sky: ['#e07a4a', '#f2a65a', '#f8d49a'], sun: '#ffe7b0', far: '#a46a50', near: '#7a4a3a', city: true },
+    lab:    { sky: ['#2b3837', '#3a4a48', '#2b3837'], far: '#46575a', near: '#38484b', cave: true },
     tunnel: { sky: ['#120e0a', '#1e1712', '#120e0a'], far: '#2a211a', near: '#211a14', cave: true },
     night:  { sky: ['#05070f', '#111a33', '#22305a'], sun: '#e8e8ff', far: '#1a2240', near: '#10162a', stars: true, night: true },
   },
