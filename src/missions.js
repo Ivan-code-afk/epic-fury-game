@@ -407,7 +407,53 @@ G.MISSIONS = [
       ['president', 'They made drones. We made a better drone and sent it back. That\'s called a trade deal.', 'happy'],
     ],
   },
-  { id: 'final', title: 'THE INVISIBLE AYATOLLAH', subtitle: 'Finale. The boss hides behind holograms.', theme: 'city', playable: false },
+  {
+    id: 'final', title: 'THE INVISIBLE AYATOLLAH', subtitle: 'Finale. Nobody has seen him. Time to find out why.', theme: 'city', playable: true,
+    ally: ['president', 'mossad'],
+    objective: { type: 'boss', boss: 'broadcast', bossName: 'THE INVISIBLE AYATOLLAH', goal: 'TAKE DOWN THE BROADCAST →' },
+    bossReveal: true,
+    allyBarks: {
+      president: ['Final mission. My best mission. All my missions are my best.', 'I\'d like to see this guy. Nobody has. Very suspicious.', 'Cardboard! I knew it. I have a nose for cardboard.', 'After this, a parade. Big parade.'],
+      mossad: ['Not him. Not him either.', 'We have his address. All seven of them.', 'Cardboard again. They buy it in bulk.', 'Stay close. I already know how this ends.'],
+    },
+    level: {
+      ground: '#',
+      terrain: R('3', 30) + R('4', 12) + R('3', 20) + R('5', 8) + R('3', 18) + R('_', 3) + R('3', 24) + R('4', 10) + R('3', 45),
+      platforms: [[20, 6, 4], [48, 6, 5], [74, 6, 4], [100, 5, 5], [118, 6, 4], [138, 7, 4], [146, 5, 4]],
+      blocks: [[26, 9, 'b'], [44, 8, 'x'], [45, 8, 'x'], [84, 9, 'b'], [108, 9, 'x'], [128, 9, 'b']],
+      objects: 'P4 A2 S14 n18 S24 n28 Q34 g38 S46 n50 T56 D60:3 S66 n72 S78 Q82 H76:5 g86 S94 n98 T104 Q102:4 S110 n113 g118 S122 Y120:5 n126 H130 G132 M134 Z163',
+    },
+    intro: [
+      ['hq', 'This is it. The capital. Somewhere ahead is the man nobody has seen in months: the Invisible Ayatollah.'],
+      ['mossad', 'Nobody has seen him. Not even us. That bothers me professionally.'],
+      ['president', 'I\'m coming too. Final missions need a president. It looks good on the poster.', 'happy'],
+      ['hero', 'Sir, Agent Avi, stay close.'],
+      ['mossad', 'I\'m always close. Usually in front.'],
+    ],
+    triggers: [
+      { col: 16, radio: ['hq', 'Cutouts of the leader all over the street. Harmless. Shoot them anyway if it helps.'] },
+      { col: 88, radio: ['president', 'Water! Again! This whole country is either sand or water.'] },
+      { col: 136, radio: ['hq', 'The broadcast bunker. He has to be inside. He\'s live on every channel.'] },
+    ],
+    bossIntro: [
+      ['hq', 'Every channel is showing him LIVE. The signal comes from this bunker.'],
+      ['mossad', 'Holograms project a shield. Kill the holograms, then hit the screen while the signal is down.'],
+      ['president', 'A man who hides behind a TV. I respect the TV part. Not the hiding part. Fire!', 'rambo'],
+    ],
+    bossPhases: [
+      { radio: ['hq', 'The broadcast is glitching! Keep it up!'] },
+      { radio: ['president', 'Cardboard falling from the sky! This is a cardboard regime!'] },
+      { radio: ['mossad', 'Last broadcast. After this, reruns only.'] },
+    ],
+    outro: [
+      ['hero', 'Sir... there\'s nobody here. Just an empty chair and a tape recorder.'],
+      ['mossad', 'We knew.'],
+      ['president', 'Invisible this whole time? That\'s actually a great strategy. Nobody can criticize you.'],
+      ['hq', 'The broadcast is off the air. The strait is open, the launchers are gone, the bomb is secured. Mission complete.'],
+      ['president', 'OPERATION EPIC FURY. Huge success. The biggest. Sergeant, you can stand next to me in the photo. Slightly behind.', 'happy'],
+      ['hero', 'Thank you, sir.'],
+    ],
+  },
 ];
 
 // President's radio lines for game events

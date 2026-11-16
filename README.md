@@ -64,7 +64,9 @@ Objects: `P` player, `A` partner, `S` soldier, `T` machine-gunner, `L` launcher 
 `V` missile rail cart, `J` missile depot (touch to plant C4),
 `C` PEACEFUL ATOM crate (one random crate holds the bomb), `F` centrifuge (leaks gas when shot), `W` timed laser barrier, `I` scientist (civilian, ducks when you fire toward him).
 
-All uppercase letters are taken, so newer objects use lowercase: `h` hostage, `j` cell bars, `g` guard dog, `l` searchlight tower, `a` anti-aircraft gun, `s` SAM site (homing missiles you can shoot down), `f` drone factory (dive target).
+All uppercase letters are taken, so newer objects use lowercase: `h` hostage, `j` cell bars, `g` guard dog, `l` searchlight tower, `a` anti-aircraft gun, `s` SAM site (homing missiles you can shoot down), `f` drone factory (dive target), `n` cardboard cutout (harmless decoy).
+
+`ally` can be one partner or a list, e.g. `ally: ['president', 'mossad']` with `allyBarks: { president: [...], mossad: [...] }`. Boss missions pick the boss with `objective.boss` ('broadcast' for the finale; default is the tollbooth), and `bossReveal: true` leaves the finale's surprise on stage.
 
 Extra level fields: `lifts: [[column, topRow, bottomRow]]`, `lamps: [[column, row]]`, `door: [[column, row]]` (tiles removed when C4 is planted), `backdrops: [[colFrom, colTo, rowFrom, rowTo]]` (interior back walls). Mission field `dark: 0.86` turns on darkness with a flashlight.
 
@@ -75,4 +77,4 @@ All sprites live in `G.SPR` (`src/sprites.js`). To replace one, load an `Image` 
 e.g. `G.SPR.president[0] = myImage`. Frame sizes are noted in the code.
 
 ## Status
-Missions 1–11 are playable. The rest show as "COMING SOON" in the menu.
+All 12 missions are playable.

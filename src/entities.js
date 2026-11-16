@@ -1069,6 +1069,176 @@
     },
   };
 
+  // Картонный двойник: безвредная приманка
+  G.Cutout = function (x, y) { Enemy.call(this, { kind: 'cutout', x: x - 2, y: y + 16 - 32, w: 20, h: 32, hp: 1, score: 50, fall: 0 }); };
+  G.Cutout.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.Cutout.prototype, {
+    kill(g) { this.dead = true; g.score += 50; g.floatText(cx(this), this.y - 4, G.pick(['CARDBOARD!', 'FAKE!', 'DECOY!', 'NOT HIM!']), '#ffd23f'); G.Audio.play('hit'); },
+    update(dt) { if (this.dead) { this.fall = Math.min(1, this.fall + dt * 3); if (this.fall >= 1) this.deadT = (this.deadT ?? 3) - dt; if (this.deadT <= 0) this.remove = true; } },
+    draw(ctx, camX) {
+      const x = Math.round(this.x - camX), y = Math.round(this.y);
+      if (!this.dead) { ctx.drawImage(G.SPR.cutout, x - 1, y); return; }
+      ctx.save(); ctx.translate(x + 10, y + 32); ctx.rotate(-this.fall * Math.PI / 2 * 0.97); ctx.drawImage(G.SPR.cutout, -11, -32); ctx.restore();
+    },
+  });
+
+  // Голограмма: идёт на героя и стреляет; держит щит босса
+  G.Hologram = function (x, y) { Enemy.call(this, { kind: 'hologram', x, y, w: 14, h: 24, hp: 2, score: 150, facing: -1, fireCd: 1 + Math.random(), t: Math.random() * 6 }); };
+  G.Hologram.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.Hologram.prototype, {
+    kill(g) {
+      this.dead = true; this.remove = true; g.score += 150; G.Audio.play('blip');
+      g.floatText(cx(this), this.y - 4, 'HOLOGRAM!', '#60e0ff');
+      for (let i = 0; i < 14; i++) g.particles.push(new G.Particle(cx(this), this.y + Math.random() * 24, (Math.random() - 0.5) * 80, -Math.random() * 60, 0.6, '#60e0ff', 2, -0.1));
+    },
+    update(dt, g) {
+      this.t += dt; this.flash -= dt;
+      const p = g.player, dx = cx(p) - cx(this);
+      this.facing = Math.sign(dx) || -1;
+      this.vx = Math.abs(dx) > 70 ? this.facing * 35 : 0;
+      this.vy = Math.min(this.vy + C.GRAVITY * dt, 520);
+      g.level.move(this, dt);
+      this.fireCd -= dt;
+      if (this.fireCd <= 0 && !p.dead) {
+        this.fireCd = 1.8 + Math.random();
+        const ang = Math.atan2(cy(p) - (this.y + 10), dx);
+        const b = new G.Bullet(cx(this), this.y + 10, Math.cos(ang) * 130, Math.sin(ang) * 130, 'enemy', 1); b.color = '#60e0ff';
+        g.bullets.push(b);
+      }
+    },
+    draw(ctx, camX, g) {
+      ctx.globalAlpha = 0.55 + Math.sin(this.t * 13) * 0.2;
+      drawSprite(ctx, this.flash > 0 ? G.tintCache(G.SPR.hologram, '#fff') : G.SPR.hologram, this.x - camX - 3, this.y - 2, this.facing > 0);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(96,224,255,.35)';
+      for (let yy = 0; yy < 24; yy += 3) if ((yy + Math.floor(this.t * 20)) % 6 === 0) ctx.fillRect(Math.round(this.x - camX - 3), Math.round(this.y + yy), 20, 1);
+    },
+  });
+
+  // ФИНАЛЬНЫЙ БОСС: бункер-телестудия «Аятоллы-невидимки». Пока живы голограммы — щит.
+  G.BroadcastBoss = function (x, y) {
+    Enemy.call(this, {
+      kind: 'boss', boss: true, x: x - 60, y: y + 16 - 84, w: 100, h: 84, hp: 60, maxHp: 60, active: false,
+      phase: 0, exposedT: 0, waveCd: 0.5, turretCd: 1.2, rainCd: 1, talkCd: 2.5, deathT: 0, score: 10000, t: 0,
+    });
+  };
+  G.BroadcastBoss.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.BroadcastBoss.prototype, {
+    holoAlive(g) { return g.entities.some(e => e.kind === 'hologram' && !e.dead); },
+    damage(g, dmg) {
+      if (this.dead || !this.active) return;
+      if (!this.open) { G.Audio.play('hit'); if (Math.random() < 0.12) g.floatText(cx(this), this.y + 10, 'SHIELDED', '#60e0ff'); return; }
+      this.hp -= dmg; this.flash = 0.08; G.Audio.play('hit');
+      const phase = Math.floor((1 - this.hp / this.maxHp) * 4);
+      if (phase > this.phase && this.hp > 0) { this.phase = phase; g.bossPhase(this, phase); }
+      if (this.hp <= 0) { this.dead = true; this.deathT = 2.6; g.score += this.score; }
+    },
+    update(dt, g) {
+      this.flash -= dt; this.t += dt;
+      const p = g.player;
+      if (this.dead) {
+        this.deathT -= dt;
+        if (Math.random() < 0.25) g.explode(this.x + Math.random() * this.w, this.y + Math.random() * this.h, 22, 'none');
+        if (this.deathT <= 0) { this.remove = true; g.bossDefeated(this); }
+        return;
+      }
+      if (!this.active) { if (Math.abs(cx(p) - cx(this)) < 290) { this.active = true; g.bossIntro(this); } return; }
+      // цикл: голограммы -> окно уязвимости -> новые голограммы
+      if (this.exposedT > 0) {
+        this.exposedT -= dt;
+        if (this.exposedT <= 0) this.waveCd = 0.8;
+      } else if (!this.holoAlive(g)) {
+        this.waveCd -= dt;
+        if (this.waveCd <= 0) {
+          if (this.spawned) { this.exposedT = 4.5; this.spawned = false; G.Audio.play('alarm'); g.floatText(cx(this), this.y - 8, 'SIGNAL LOST!', '#ffd23f'); }
+          else {
+            this.spawned = true;
+            const n = 2 + Math.min(2, this.phase);
+            for (let i = 0; i < n; i++) g.entities.push(new G.Hologram(this.x - 20 - i * 26, this.y + this.h - 24));
+            G.Audio.play('blip');
+          }
+        }
+      }
+      // турели (фаза 1+)
+      if (this.phase >= 1) {
+        this.turretCd -= dt;
+        if (this.turretCd <= 0) {
+          this.turretCd = 1.3;
+          [this.y + 22, this.y + 60].forEach(ty => {
+            const ang = Math.atan2(cy(p) - ty, cx(p) - this.x);
+            g.bullets.push(new G.Bullet(this.x + 2, ty, Math.cos(ang) * 150, Math.sin(ang) * 150, 'enemy', 1));
+          });
+        }
+      }
+      // дождь из картонных двойников (фаза 2+)
+      if (this.phase >= 2) {
+        this.rainCd -= dt;
+        if (this.rainCd <= 0) {
+          this.rainCd = 0.9;
+          const b = new G.Bullet(g.camX + 20 + Math.random() * (this.x - g.camX - 40), 34, (Math.random() - 0.5) * 30, 0, 'enemy', 1);
+          b.grav = 300; b.cardboard = true; b.life = 4; g.bullets.push(b);
+        }
+      }
+      // веер «записанных обращений» (фаза 3)
+      if (this.phase >= 3) {
+        this.talkCd -= dt;
+        if (this.talkCd <= 0) {
+          this.talkCd = 2.4;
+          for (let i = -2; i <= 2; i++) {
+            const ang = Math.PI + i * 0.18 - 0.1;
+            const b = new G.Bullet(this.x + 30, this.y + 30, Math.cos(ang) * 120, Math.sin(ang) * 120, 'enemy', 1); b.talk = true; b.life = 3;
+            g.bullets.push(b);
+          }
+        }
+      }
+    },
+    draw(ctx, camX, g) {
+      const x = Math.round(this.x - camX), y = Math.round(this.y), fl = this.flash > 0;
+      // бункер
+      ctx.fillStyle = fl ? '#fff' : '#7d7368'; ctx.fillRect(x, y + 10, this.w, this.h - 10);
+      ctx.fillStyle = '#5f574e'; ctx.fillRect(x, y + 10, this.w, 3); ctx.fillRect(x, y + this.h - 6, this.w, 6);
+      // антенна и тарелка
+      ctx.fillStyle = '#555'; ctx.fillRect(x + 80, y - 18, 2, 28);
+      ctx.fillStyle = '#999'; ctx.beginPath(); ctx.arc(x + 70, y + 2, 9, Math.PI * 0.8, Math.PI * 1.9); ctx.fill();
+      ctx.fillStyle = Math.floor(this.t * 3) % 2 ? '#f22' : '#600'; ctx.fillRect(x + 79, y - 20, 4, 3);
+      // экран
+      const sx = x + 14, sy = y + 18, sw = 56, sh = 40;
+      ctx.fillStyle = '#111'; ctx.fillRect(sx - 3, sy - 3, sw + 6, sh + 6);
+      ctx.fillStyle = this.open ? '#203040' : '#0a1418'; ctx.fillRect(sx, sy, sw, sh);
+      ctx.globalAlpha = this.open ? 0.4 : 1;
+      ctx.drawImage(G.SPR.silhouette, sx + 18, sy + 10);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(255,255,255,.08)';
+      for (let i = 0; i < 6; i++) ctx.fillRect(sx, sy + ((i * 7 + Math.floor(this.t * 30)) % sh), sw, 1);
+      if (this.open) { for (let i = 0; i < 40; i++) { ctx.fillStyle = Math.random() < 0.5 ? '#ddd' : '#555'; ctx.fillRect(sx + Math.random() * sw, sy + Math.random() * sh, 2, 1); } }
+      G.text(ctx, this.open ? 'NO SIGNAL' : '● LIVE*', sx + 3, sy + 2, { size: 6, color: this.open ? '#ffd23f' : '#f44', shadow: false });
+      if (!this.open) G.text(ctx, '*pre-recorded', sx + sw - 2, sy + sh - 8, { size: 5, align: 'right', color: '#aaa', shadow: false });
+      // щит
+      if (!this.open) {
+        ctx.strokeStyle = 'rgba(96,224,255,' + (0.35 + Math.sin(this.t * 6) * 0.15) + ')'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.ellipse(x + this.w / 2, y + this.h / 2 + 6, this.w / 2 + 8, this.h / 2 + 6, 0, 0, 7); ctx.stroke(); ctx.lineWidth = 1;
+      }
+      // турели
+      ctx.fillStyle = '#333'; ctx.fillRect(x - 6, y + 20, 8, 4); ctx.fillRect(x - 6, y + 58, 8, 4);
+    },
+  });
+
+  Object.defineProperty(G.BroadcastBoss.prototype, 'open', { get() { return this.exposedT > 0; } });
+
+  // Финальный твист: пустое кресло и магнитофон
+  G.RevealProp = function (x, bottom) { Object.assign(this, { kind: 'reveal', x: x - 24, y: bottom - 30, w: 48, h: 30, t: 0 }); };
+  G.RevealProp.prototype = {
+    update(dt) { this.t += dt; },
+    draw(ctx, camX) {
+      const x = Math.round(this.x - camX), y = this.y;
+      ctx.fillStyle = '#6a1a1a'; ctx.fillRect(x + 4, y + 2, 14, 16); ctx.fillRect(x + 2, y + 16, 18, 4); // кресло
+      ctx.fillStyle = '#333'; ctx.fillRect(x + 10, y + 20, 2, 6); ctx.fillRect(x + 4, y + 26, 14, 2);
+      ctx.fillStyle = '#ccc'; ctx.fillRect(x + 26, y + 18, 18, 10); ctx.fillStyle = '#333';                // магнитофон
+      ctx.beginPath(); ctx.arc(x + 31, y + 23, 3, 0, 7); ctx.arc(x + 39, y + 23, 3, 0, 7); ctx.fill();
+      if (Math.floor(this.t * 2) % 2) G.text(ctx, 'PLAY ▶', x + 35, y + 6, { size: 6, align: 'center', color: '#9fe870' });
+    },
+  };
+
   // Ракета РПГ (вражеская)
   G.EnemyRocket = function (x, y, dir) {
     Object.assign(this, { x, y, vx: dir * 60, dir, life: 3, owner: 'enemy' });
@@ -1130,6 +1300,8 @@
     },
     draw(ctx, camX) {
       if (this.bill) { ctx.drawImage(G.SPR.bill, Math.round(this.x - camX) - 5, Math.round(this.y) - 2); return; }
+      if (this.cardboard) { ctx.fillStyle = '#c8a878'; ctx.fillRect(Math.round(this.x - camX) - 4, Math.round(this.y) - 5, 8, 10); ctx.fillStyle = '#333'; ctx.fillRect(Math.round(this.x - camX) - 1, Math.round(this.y) - 3, 2, 3); return; }
+      if (this.talk) { const bx = Math.round(this.x - camX), by = Math.round(this.y); ctx.fillStyle = '#fff'; ctx.fillRect(bx - 6, by - 4, 12, 8); ctx.fillRect(bx - 2, by + 4, 2, 2); G.text(ctx, '!!', bx, by - 4, { size: 6, align: 'center', color: '#c00', shadow: false }); return; }
       if (this.rock) { ctx.fillStyle = '#6f6152'; ctx.fillRect(Math.round(this.x - camX) - 3, Math.round(this.y) - 3, 6, 6); ctx.fillStyle = '#8a7a6a'; ctx.fillRect(Math.round(this.x - camX) - 3, Math.round(this.y) - 3, 6, 2); return; }
       ctx.fillStyle = this.color;
       if (Math.abs(this.vy) > Math.abs(this.vx)) ctx.fillRect(Math.round(this.x - camX) - 1, Math.round(this.y) - 2, 2, 4);

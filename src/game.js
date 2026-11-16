@@ -29,7 +29,7 @@
       this.missionIdx = i; this.mission = m;
       this.level = G.Level.fromSpec(m.level);
       this.entities = []; this.bullets = []; this.particles = []; this.texts = [];
-      this.player = null; this.ally = null; this.base = null; this.boss = null; this.depot = null; this.target = null;
+      this.player = null; this.ally = null; this.allies = []; this.base = null; this.boss = null; this.depot = null; this.target = null;
       this.lifts = (m.level.lifts || []).map(l => new G.Lift(l[0], l[1], l[2]));
       this.hostages = []; this.followers = []; this.alarmCount = 0;
       this.planted = false; this.escapeT = 0; this.rockT = 0;
@@ -45,7 +45,14 @@
           case 'a': this.entities.push(new G.AAGun(s.x, s.y)); break;
           case 's': this.entities.push(new G.SamSite(s.x, s.y)); break;
           case 'f': this.target = new G.Factory(s.x, s.y); this.entities.push(this.target); break;
-          case 'A': if (m.ally) this.ally = new G.Ally(m.ally, s.x, s.y, m.allyBarks); break;
+          case 'A': if (m.ally) {
+            [].concat(m.ally).forEach((type, i) => {
+              const barks = Array.isArray(m.allyBarks) ? m.allyBarks : (m.allyBarks || {})[type];
+              const a = new G.Ally(type, s.x - i * 14, s.y, barks); a.barkT = 4 + i * 5;
+              this.allies.push(a);
+            });
+            this.ally = this.allies[0];
+          } break;
           case 'S': this.entities.push(new G.Soldier(s.x, s.y)); break;
           case 'T': this.entities.push(new G.Turret(s.x, s.y)); break;
           case 'L': this.entities.push(new G.Truck(s.x, s.y, true, 0)); this.launchersLeft++; break;
@@ -65,7 +72,8 @@
           case 'I': this.entities.push(new G.Scientist(s.x, s.y)); break;
           case 'V': this.entities.push(new G.Cart(s.x, s.y)); break;
           case 'J': this.depot = new G.Depot(s.x, s.y); this.entities.push(this.depot); break;
-          case 'Z': this.boss = new G.TollBooth(s.x, s.y); this.entities.push(this.boss); break;
+          case 'Z': this.boss = m.objective.boss === 'broadcast' ? new G.BroadcastBoss(s.x, s.y) : new G.TollBooth(s.x, s.y); this.entities.push(this.boss); break;
+          case 'n': this.entities.push(new G.Cutout(s.x, s.y)); break;
           case 'X': this.base = new G.Base(s.x, s.y, m.objective.baseHp); break;
           case 'E': this.entities.push(new G.ExitFlag(s.x, s.y)); break;
           default: if ('HMNGYR'.includes(s.type)) this.entities.push(new G.Pickup(s.type, s.x, s.y));
@@ -176,7 +184,10 @@
     bossPhase(b, phase) {
       const lines = this.mission.bossPhases || [];
       const l = lines[phase - 1];
-      if (l) { this.radio(l.radio); b.price = l.price; this.floatText(b.x + b.w / 2, b.y - 10, '$' + l.price + ',000,000!', '#ffd23f'); }
+      if (l) {
+        this.radio(l.radio);
+        if (l.price !== undefined) { b.price = l.price; this.floatText(b.x + b.w / 2, b.y - 10, '$' + l.price + ',000,000!', '#ffd23f'); }
+      }
       this.shake = 6; G.Audio.play('alarm');
     },
     targetHit() {
@@ -186,7 +197,13 @@
       this.shake = 14; t.remove = true;
       this.pending = { t: 1.6, fn: () => this.winMission() };
     },
-    bossDefeated() { if (this.mission.objective.type === 'boss') this.winMission(); },
+    bossDefeated(b) {
+      if (this.mission.objective.type !== 'boss') return;
+      if (this.mission.bossReveal) {
+        this.entities.push(new G.RevealProp(b.x + b.w / 2, b.y + b.h));
+        this.pending = { t: 2, fn: () => this.winMission() };
+      } else this.winMission();
+    },
 
     // ---------- HIMARS ----------
     callStrike() {
@@ -227,7 +244,7 @@
       } else if (owner === 'enemy') {
         const p = this.player;
         if (Math.hypot(p.x + 5 - x, p.y + 9 - y) < r + 6) p.hurt(this, dmg || 1);
-        if (this.ally && Math.hypot(this.ally.x - x, this.ally.y - y) < r + 6) this.ally.hit(this);
+        for (const a of this.allies) if (Math.hypot(a.x - x, a.y - y) < r + 6) a.hit(this);
         for (const h of this.followers) if (Math.hypot(h.x + 5 - x, h.y + 9 - y) < r + 6) h.hit(this, dmg || 1);
       }
     },
@@ -240,7 +257,7 @@
         const p = this.player;
         if (!p.dead && G.overlap(box, p)) { p.hurt(this, b.dmg); b.remove = true; return; }
         for (const h of this.followers) if (G.overlap(box, h)) { h.hit(this, b.dmg); b.remove = true; return; }
-        if (this.ally && G.overlap(box, this.ally)) { this.ally.hit(this); b.remove = true; }
+        for (const a of this.allies) if (G.overlap(box, a)) { a.hit(this); b.remove = true; return; }
       }
     },
 
@@ -314,7 +331,7 @@
 
       for (const lf of this.lifts) lf.update(dt, this);
       this.player.update(dt, this);
-      if (this.ally) this.ally.update(dt, this);
+      for (const a of this.allies) a.update(dt, this);
       if (this.base) this.base.update(dt, this);
       for (const e of this.entities) e.update(dt, this);
       for (const b of this.bullets) b.update(dt, this);
@@ -369,7 +386,10 @@
       // Камера (в полёте — автоскролл)
       if (o.type === 'flight') this.camX = Math.min(this.level.pxW - W, this.camX + (o.speed || 45) * dt);
       else {
-        const target = Math.max(0, Math.min(this.level.pxW - W, this.player.x - W * 0.4));
+        let want = this.player.x - W * 0.4;
+        const bo = this.boss;
+        if (bo && bo.active) want = Math.max(want, bo.x + bo.w + 12 - W); // арена босса целиком в кадре
+        const target = Math.max(0, Math.min(this.level.pxW - W, want));
         this.camX += (target - this.camX) * Math.min(1, dt * 8);
       }
       this.shake = Math.max(0, this.shake - dt * 20);
@@ -415,7 +435,8 @@
         G.Dialog.draw(ctx);
       }
       if (this.state === 'pause') this.overlay('PAUSED', ['ENTER — resume', 'C — quit to menu', 'M — sound on/off']);
-      if (this.state === 'win') this.overlay('MISSION ACCOMPLISHED', ['Score: ' + this.score, 'Best: ' + (save[this.mission.id] || 0), '', 'ENTER — continue'], '#9fe870');
+      if (this.state === 'win' && this.missionIdx === G.MISSIONS.length - 1) this.overlay('OPERATION EPIC FURY: COMPLETE', ['All 12 missions done. Thanks for playing!', 'Score: ' + this.score, '', 'THE END', '', 'ENTER — mission select'], '#ffd23f');
+      else if (this.state === 'win') this.overlay('MISSION ACCOMPLISHED', ['Score: ' + this.score, 'Best: ' + (save[this.mission.id] || 0), '', 'ENTER — continue'], '#9fe870');
       if (this.state === 'fail') this.overlay('MISSION FAILED', [this.failReason || '', '', 'ENTER — retry', 'C — mission select'], '#ff5050');
     },
 
@@ -440,13 +461,13 @@
       for (const [c, r] of this.mission.level.lamps || []) ctx.drawImage(G.SPR.lamp, c * T + 4 - camX, r * T);
       for (const e of this.entities) if (e.kind === 'truck') e.draw(ctx, camX, this);
       for (const e of this.entities) if (e.kind !== 'truck') e.draw(ctx, camX, this);
-      if (this.ally) this.ally.draw(ctx, camX, this);
+      for (const a of this.allies) a.draw(ctx, camX, this);
       this.player.draw(ctx, camX, this);
       for (const b of this.bullets) b.draw(ctx, camX, this);
       for (const p of this.particles) p.draw(ctx, camX, this);
       for (const t of this.texts) G.text(ctx, t.text, Math.round(t.x - camX), Math.round(t.y), { size: 7, align: 'center', color: t.color });
       if (this.mission.dark) this.drawDarkness(camX);
-      if (this.ally) this.ally.drawBubble(ctx, camX);
+      for (const a of this.allies) a.drawBubble(ctx, camX);
       for (const h of this.hostages || []) h.drawBubble(ctx, camX);
       for (const st of this.strikeQ) {
         if (st.fired) continue;
@@ -501,7 +522,7 @@
       if (p.rage > 0) G.text(ctx, 'FURY ' + Math.ceil(p.rage), 180, 3, { size: 8, color: '#ff4040' });
       let obj = '';
       if (o.type === 'reach') obj = 'REACH THE FLAG →';
-      if (o.type === 'boss') obj = 'SHUT DOWN THE TOLLBOOTH →';
+      if (o.type === 'boss') obj = o.goal || 'SHUT DOWN THE TOLLBOOTH →';
       if (o.type === 'rescue') {
         const freed = this.followers.length, total = this.hostages.length;
         const captive = this.hostages.filter(h => h.state === 'captive').length;

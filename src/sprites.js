@@ -166,6 +166,26 @@ G.SPR = {};
     r('#333', 2, 6, 10, 2); r('#333', 6, 8, 2, 2);                // пулемёт
   });
 
+  // ---------- СИЛУЭТ «АЯТОЛЛЫ-НЕВИДИМКИ» (вымышленный, без лица) ----------
+  G.SPR.silhouette = mk(20, 26, (x, r) => {
+    x.fillStyle = '#111';
+    x.beginPath(); x.ellipse(10, 4, 6, 4, 0, 0, 7); x.fill();          // чалма
+    r('#111', 6, 6, 8, 7);                                              // голова
+    x.beginPath(); x.moveTo(6, 11); x.lineTo(14, 11); x.lineTo(12, 15); x.lineTo(8, 15); x.fill(); // борода
+    x.beginPath(); x.moveTo(5, 14); x.lineTo(15, 14); x.lineTo(19, 26); x.lineTo(1, 26); x.fill(); // халат
+    r('#fff', 8, 7, 4, 1); r('#fff', 9, 8, 2, 3); r('#fff', 9, 9, 1, 1);  // «?» вместо лица
+    x.clearRect(9, 8, 1, 1); r('#fff', 10, 8, 1, 1); r('#fff', 9, 9, 1, 1); r('#fff', 9, 11, 1, 1);
+  });
+  G.SPR.hologram = G.tint(G.SPR.silhouette, '#60e0ff');
+  G.SPR.cutout = mk(22, 32, (x, r) => {
+    r('#a07850', 10, 24, 2, 8); r('#a07850', 6, 30, 10, 2);           // подставка
+    x.drawImage(G.tint(G.SPR.silhouette, '#c8a878'), 1, 0);
+    x.globalCompositeOperation = 'source-atop';
+    r('#b89868', 0, 18, 22, 1); r('#b89868', 0, 8, 22, 1);
+    x.globalCompositeOperation = 'source-over';
+    r('#333', 9, 8, 4, 1); r('#333', 10, 9, 2, 2); r('#333', 10, 12, 2, 1); // нарисованный «?»
+  });
+
   // ---------- ЗЕНИТКА ----------
   G.SPR.aagun = mk(26, 20, (x, r) => {
     r('#4f5a3a', 2, 12, 22, 8); r('#3a4428', 2, 18, 22, 2); r('#111', 4, 17, 5, 3); r('#111', 17, 17, 5, 3);
