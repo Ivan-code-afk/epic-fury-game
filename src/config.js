@@ -3,6 +3,7 @@ window.G = window.G || {};
 
 G.CONFIG = {
   title: 'CONQUER IRAN',
+  version: '0.9 beta',
   subtitle: 'OPERATION EPIC FURY',
   W: 384,          // внутреннее разрешение
   H: 216,

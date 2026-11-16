@@ -9,7 +9,7 @@ G.Input = (function () {
     KeyZ: 'fire', KeyJ: 'fire',
     KeyC: 'grenade', KeyL: 'grenade',
     KeyV: 'special', KeyI: 'special',
-    Enter: 'start', Escape: 'start', KeyP: 'start',
+    Enter: 'start', KeyP: 'start', Escape: 'back', Backspace: 'back',
     KeyM: 'mute',
   };
   const down = {}, pressed = {};
@@ -44,6 +44,10 @@ G.Input = (function () {
       btn.addEventListener('touchcancel', off, { passive: false });
     });
   }
+  // Подсказка «поверни телефон» (только на сенсорных устройствах)
+  const rot = document.getElementById('rotate');
+  if (isTouch && rot) { rot.classList.add('on'); rot.addEventListener('click', () => rot.classList.remove('on')); }
+
   // Тап по экрану = «старт» в меню
   window.addEventListener('pointerdown', e => {
     G.Audio && G.Audio.unlock();

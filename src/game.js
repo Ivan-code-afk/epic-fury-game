@@ -19,16 +19,33 @@
   let save = {};
   try { save = JSON.parse(localStorage.getItem('epicfury_save') || '{}'); } catch (e) {}
   function persist() { try { localStorage.setItem('epicfury_save', JSON.stringify(save)); } catch (e) {} }
+  function normalizeSave() {
+    save.best = save.best || {}; save.rank = save.rank || {};
+    for (const m of G.MISSIONS) if (typeof save[m.id] === 'number') { save.best[m.id] = Math.max(save.best[m.id] || 0, save[m.id]); delete save[m.id]; }
+    if (typeof save.unlocked !== 'number') {
+      // старые сохранения: открыть всё до последней пройденной миссии
+      let u = 0; G.MISSIONS.forEach((m, i) => { if (save.best[m.id] != null) u = Math.max(u, i + 1); });
+      save.unlocked = Math.min(u, G.MISSIONS.length - 1);
+    }
+  }
+  normalizeSave();
+  if (save.mute) G.Audio.toggleMute();
+  // Для тестеров: адрес с #unlockall открывает все миссии (без записи в сохранение)
+  G.testerUnlock = /unlockall/i.test(location.hash);
 
   const g = G.game = {
-    state: 'title', time: 0, sel: 0, score: 0, shake: 0, radioQ: [], radioCur: null, texts: [],
+    state: 'title', time: 0, sel: null, score: 0, shake: 0, radioQ: [], radioCur: null, texts: [],
 
     setDifficulty(k) { if (C.difficulty[k]) { save.diff = k; persist(); } },
+    get save() { return save; },
+    persist,
+    resetSave() { const keep = { diff: save.diff, mute: save.mute }; save = keep; normalizeSave(); persist(); },
 
     // ---------- ЗАПУСК МИССИИ ----------
     startMission(i) {
       const m = G.MISSIONS[i];
-      this.missionIdx = i; this.mission = m;
+      this.missionIdx = i; this.mission = m; this.sel = i;
+      this.stats = { kills: 0, deaths: 0, hits: 0, time: 0 }; this.result = null;
       this.level = G.Level.fromSpec(m.level);
       this.entities = []; this.bullets = []; this.particles = []; this.texts = [];
       this.player = null; this.ally = null; this.allies = []; this.base = null; this.boss = null; this.depot = null; this.target = null;
@@ -112,21 +129,28 @@
       while (tries++ < 40 && !this.level.solidAt(p.x + 5, 200) && !this.level.solidAt(p.x + 5, 180)) p.x -= T;
     },
     onPlayerDeath() {
+      this.stats.deaths++;
       this.lives--;
       if (this.lives < 0) this.pending = { t: 0.9, fn: () => this.failMission('Sgt. Steel has fallen.') };
       else this.radio(G.pick(G.PRESIDENT_BARKS.death));
     },
     failMission(reason) {
       if (this.state !== 'play') return;
-      this.state = 'fail'; this.failReason = reason; G.Audio.stopMusic(); G.Audio.play('fail');
+      G.Menus.open(this, 'fail'); this.failReason = reason; G.Audio.stopMusic(); G.Audio.play('fail');
     },
     winMission() {
       if (this.state !== 'play') return;
       this.state = 'outro'; G.Audio.play('win');
       const m = this.mission;
-      const best = save[m.id] || 0;
-      if (this.score > best) { save[m.id] = this.score; persist(); }
-      G.Dialog.start(m.outro, () => { this.state = 'win'; G.Audio.stopMusic(); });
+      const st = this.stats, rank = G.Menus.rankFor(st);
+      const prev = save.best[m.id];
+      const newBest = prev == null || this.score > prev;
+      if (newBest) save.best[m.id] = this.score;
+      save.rank[m.id] = G.Menus.betterRank(rank, save.rank[m.id]);
+      save.unlocked = Math.max(save.unlocked, Math.min(this.missionIdx + 1, G.MISSIONS.length - 1));
+      persist();
+      this.result = { score: this.score, time: st.time, kills: st.kills, deaths: st.deaths, hits: st.hits, rank, newBest };
+      G.Dialog.start(m.outro, () => { G.Menus.open(this, 'results'); G.Audio.stopMusic(); });
     },
     reachExit() {
       const t = this.mission.objective.type;
@@ -304,29 +328,13 @@
     update(dt) {
       const I = G.Input;
       this.time += dt;
-      if (I.pressed('mute')) G.Audio.toggleMute();
+      if (I.pressed('mute')) { save.mute = G.Audio.toggleMute(); persist(); }
 
-      if (this.state === 'title') {
-        if (I.pressed('start') || I.pressed('fire') || I.pressed('jump') || I.pressed('tap')) { this.state = 'select'; G.Audio.play('select'); }
-        return;
-      }
-      if (this.state === 'select') return this.updateSelect();
+      if (G.Menus.handles(this.state)) return G.Menus.update(this, dt);
       if (this.state === 'briefing' || this.state === 'outro' || this.state === 'talk') { G.Dialog.update(dt); return; }
-      if (this.state === 'win' || this.state === 'fail') {
-        if (I.pressed('start') || I.pressed('fire') || I.pressed('tap')) {
-          if (this.state === 'fail') this.startMission(this.missionIdx);
-          else { this.state = 'select'; this.sel = this.nextPlayable(this.missionIdx); }
-        }
-        if (I.pressed('grenade')) this.state = 'select';
-        return;
-      }
-      if (this.state === 'pause') {
-        if (I.pressed('start') || I.pressed('tap')) this.state = 'play';
-        if (I.pressed('grenade')) { this.state = 'select'; G.Audio.stopMusic(); }
-        return;
-      }
       // --- play ---
-      if (I.pressed('start')) { this.state = 'pause'; return; }
+      if (I.pressed('start') || I.pressed('back')) { G.Menus.open(this, 'pause'); return; }
+      this.stats.time += dt;
       const o = this.mission.objective;
       if (I.pressed('special')) {
         if (o.special === 'himars') this.callStrike();
@@ -413,34 +421,11 @@
       return from;
     },
 
-    updateSelect() {
-      const I = G.Input, n = G.MISSIONS.length;
-      const keys = Object.keys(C.difficulty), di = Math.max(0, keys.indexOf(save.diff || 'normal'));
-      const setDiff = d => { save.diff = keys[(d + keys.length) % keys.length]; persist(); G.Audio.play('blip'); };
-      if (I.pressed('left')) setDiff(di - 1);
-      if (I.pressed('right')) setDiff(di + 1);
-      if (I.tapPos && I.tapPos.y > H - 26) { setDiff(di + 1); return; }
-      if (I.pressed('down')) { this.sel = (this.sel + 1) % n; G.Audio.play('blip'); }
-      if (I.pressed('up')) { this.sel = (this.sel + n - 1) % n; G.Audio.play('blip'); }
-      if (I.tapPos) {
-        const i = Math.floor((I.tapPos.y - 34) / 13);
-        if (i >= 0 && i < n) {
-          if (i === this.sel && G.MISSIONS[i].playable) { G.Audio.play('select'); return this.startMission(i); }
-          this.sel = i; G.Audio.play('blip');
-        }
-        return;
-      }
-      if ((I.pressed('start') || I.pressed('fire') || I.pressed('jump')) && G.MISSIONS[this.sel].playable) {
-        G.Audio.play('select'); this.startMission(this.sel);
-      }
-    },
-
     // ---------- ОТРИСОВКА ----------
     draw() {
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
       ctx.imageSmoothingEnabled = false;
-      if (this.state === 'title') return this.drawTitle();
-      if (this.state === 'select') return this.drawSelect();
+      if (G.Menus.full(this.state)) return G.Menus.draw(this, ctx);
       this.drawWorld();
       this.drawHUD();
       if (this.state === 'briefing' || this.state === 'outro' || this.state === 'talk') {
@@ -452,10 +437,7 @@
         }
         G.Dialog.draw(ctx);
       }
-      if (this.state === 'pause') this.overlay('PAUSED', ['ENTER — resume', 'C — quit to menu', 'M — sound on/off']);
-      if (this.state === 'win' && this.missionIdx === G.MISSIONS.length - 1) this.overlay('OPERATION EPIC FURY: COMPLETE', ['All 12 missions done. Thanks for playing!', 'Score: ' + this.score, '', 'THE END', '', 'ENTER — mission select'], '#ffd23f');
-      else if (this.state === 'win') this.overlay('MISSION ACCOMPLISHED', ['Score: ' + this.score, 'Best: ' + (save[this.mission.id] || 0), '', 'ENTER — continue'], '#9fe870');
-      if (this.state === 'fail') this.overlay('MISSION FAILED', [this.failReason || '', '', 'ENTER — retry', 'C — mission select'], '#ff5050');
+      G.Menus.drawOverlay(this, ctx);
     },
 
     drawWorld() {
@@ -606,48 +588,6 @@
       }
     },
 
-    overlay(title, lines, color) {
-      ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(0, 0, W, H);
-      G.text(ctx, title, W / 2, 60, { size: 16, align: 'center', color: color || '#ffd23f' });
-      lines.forEach((l, i) => G.text(ctx, l, W / 2, 92 + i * 12, { size: 8, align: 'center' }));
-    },
-
-    drawTitle() {
-      G.Backgrounds.draw(ctx, 'desert', this.time * 30, this.time);
-      ctx.fillStyle = '#b3824f'; ctx.fillRect(0, 160, W, 56);
-      // пролетающие дроны
-      for (let i = 0; i < 3; i++) {
-        const x = W + 40 - ((this.time * 50 + i * 150) % (W + 120));
-        ctx.drawImage(G.SPR.shahed[Math.floor(this.time * 20) % 2], Math.round(x), 30 + i * 22);
-      }
-      const f = Math.floor(this.time * 10) % 4;
-      G.drawSprite(ctx, G.SPR.hero[f], 90, 140, false);
-      G.drawSprite(ctx, G.SPR.president[f], 60, 136, false);
-      G.drawSprite(ctx, G.SPR.mossad[f], 120, 140, false);
-      ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(0, 26, W, 62);
-      G.text(ctx, C.title, W / 2, 30, { size: 30, align: 'center', color: '#ffd23f', shadowColor: '#8a2010' });
-      G.text(ctx, C.subtitle, W / 2, 68, { size: 9, align: 'center' });
-      if (Math.floor(this.time * 2) % 2) G.text(ctx, G.Input.isTouch ? 'TAP TO START' : 'PRESS ENTER', W / 2, 110, { size: 10, align: 'center' });
-      G.text(ctx, 'Satire. All characters are fictional.', W / 2, H - 12, { size: 7, align: 'center', color: '#ddd' });
-    },
-
-    drawSelect() {
-      ctx.fillStyle = '#0b1020'; ctx.fillRect(0, 0, W, H);
-      G.text(ctx, 'SELECT MISSION', W / 2, 10, { size: 12, align: 'center', color: '#ffd23f' });
-      G.MISSIONS.forEach((m, i) => {
-        const y = 34 + i * 13, on = i === this.sel;
-        if (on) { ctx.fillStyle = 'rgba(255,210,63,.18)'; ctx.fillRect(10, y - 2, W - 20, 12); }
-        const col = m.playable ? (on ? '#ffd23f' : '#fff') : '#666';
-        G.text(ctx, String(i + 1).padStart(2, ' ') + '. ' + m.title, 16, y, { size: 8, color: col });
-        const tag = !m.playable ? 'COMING SOON' : Array.isArray(m.ally) ? '★ WITH PRESIDENT + MOSSAD' : m.ally === 'president' ? '★ WITH THE PRESIDENT' : m.ally === 'mossad' ? '★ WITH MOSSAD' : (save[m.id] ? 'BEST ' + save[m.id] : '');
-        G.text(ctx, tag, W - 16, y, { size: 7, align: 'right', color: m.playable ? '#9fe870' : '#555' });
-      });
-      const m = G.MISSIONS[this.sel];
-      G.text(ctx, m.subtitle, W / 2, H - 24, { size: 7, align: 'center', color: '#aaa' });
-      const d = C.difficulty[save.diff || 'normal'];
-      const dcol = { EASY: '#9fe870', NORMAL: '#ffd23f', HARD: '#ff5050' }[d.name];
-      G.text(ctx, '◀  DIFFICULTY: ' + d.name + '  ▶', W / 2, H - 12, { size: 8, align: 'center', color: dcol });
-    },
   };
 
   // ---------- ЦИКЛ ----------
@@ -655,6 +595,9 @@
   function frame(now) {
     const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000)); last = now;
     try { g.update(dt); g.draw(); } catch (e) { console.error(e); }
+    // в меню сенсорные кнопки прячутся, чтобы не закрывать пункты
+    const inMenu = G.Menus.full(g.state);
+    if (inMenu !== frame.inMenu) { frame.inMenu = inMenu; const t = document.getElementById('touch'); if (t) t.classList.toggle('inmenu', inMenu); }
     G.Input.endFrame();
     requestAnimationFrame(frame);
   }

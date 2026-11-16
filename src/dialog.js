@@ -55,6 +55,8 @@ G.Dialog = {
     this.shown = Math.min(this.cur.text.length, this.shown + dt * 45);
     if (Math.floor(this.shown) !== before && Math.floor(this.shown) % 3 === 0) G.Audio.play('blip');
     const I = G.Input;
+    const tapSkip = I.tapPos && I.tapPos.x > G.CONFIG.W - 70 && I.tapPos.y > G.CONFIG.H - 82 && I.tapPos.y < G.CONFIG.H - 62;
+    if (I.pressed('back') || I.pressed('grenade') || tapSkip) { this.queue = []; this.next(); return; }
     if (I.pressed('fire') || I.pressed('jump') || I.pressed('start') || I.pressed('tap')) {
       if (this.shown < this.cur.text.length) this.shown = this.cur.text.length; else this.next();
     }
@@ -78,5 +80,9 @@ G.Dialog = {
       G.text(ctx, part, 58, y + 17 + i * 9, { size: 8 });
     });
     if (this.shown >= this.cur.text.length && Math.floor(this.t * 3) % 2) G.text(ctx, '▼', W - 16, y + 46, { size: 8, color: '#ffd23f' });
+    if (this.queue.length) {
+      ctx.fillStyle = 'rgba(0,0,20,.8)'; ctx.fillRect(W - 66, y - 16, 62, 13);
+      G.text(ctx, G.Input.isTouch ? 'SKIP ▶▶' : 'SKIP [Esc]', W - 35, y - 14, { size: 7, align: 'center', color: '#ffd23f' });
+    }
   },
 };

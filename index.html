@@ -15,10 +15,16 @@
         font: bold 16px monospace; display: flex; align-items: center; justify-content: center;
         user-select: none; -webkit-user-select: none; }
   .tb.act { background: rgba(255,80,60,.45); }
+  #touch.inmenu .tb { display: none; }
+  #rotate { position: fixed; inset: 0; display: none; z-index: 10; background: rgba(0,0,0,.92); color: #ffd23f;
+            font: bold 18px monospace; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; }
+  #rotate small { color: #aaa; font-size: 13px; }
+  @media (orientation: portrait) { #rotate.on { display: flex; } }
 </style>
 </head>
 <body>
 <div id="wrap"><canvas id="screen"></canvas></div>
+<div id="rotate"><div style="font-size:48px">⟳</div>Rotate your phone<br>to landscape<small>Tap to play anyway</small></div>
 <div id="touch">
   <div class="tb" data-k="left"  style="left:14px;  bottom:70px">◀</div>
   <div class="tb" data-k="right" style="left:120px; bottom:70px">▶</div>
@@ -38,6 +44,7 @@
 <script src="src/entities.js"></script>
 <script src="src/dialog.js"></script>
 <script src="src/missions.js"></script>
+<script src="src/menus.js"></script>
 <script src="src/game.js"></script>
 </body>
 </html>

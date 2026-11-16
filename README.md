@@ -20,6 +20,13 @@ Open `index.html` in a browser. It also works on GitHub Pages (Settings → Page
 
 Down + jump drops through a platform.
 
+## Game loop
+Title → main menu: **Continue**, **New Game**, **Mission Select**, Difficulty, Sound, How to Play, Fullscreen, **Reset Progress** (with confirmation).
+Missions unlock one by one. After each mission: a results screen (score, time, kills, deaths, hits taken, rank S/A/B/C) with Next / Replay / Mission Select / Main Menu. Pause menu: Resume, Restart, Sound, Mission Select, Main Menu. Dialogue can be skipped (Esc / C / SKIP). After the finale: credits.
+Progress, best scores, ranks, difficulty and sound are saved in the browser.
+
+**For testers:** open the game with `#unlockall` at the end of the address (e.g. `https://ivan-code-afk.github.io/epic-fury-game/#unlockall`) to unlock every mission without touching saved progress.
+
 ## Difficulty
 Pick EASY / NORMAL / HARD with ◀ ▶ on the mission select screen (tap the line on phones). The choice is saved.
 

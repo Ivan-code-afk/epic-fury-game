@@ -104,6 +104,7 @@
     },
     hurt(g, dmg) {
       if (this.invuln > 0 || this.dead || g.state !== 'play') return;
+      g.stats.hits++;
       this.hp -= dmg; this.invuln = C.player.invuln; G.Audio.play('hurt'); g.shake = 4;
       if (this.hp <= 0) this.die(g);
     },
@@ -179,6 +180,7 @@
     },
     hurt(g, dmg) {
       if (this.invuln > 0 || this.dead || g.state !== 'play') return;
+      g.stats.hits++;
       this.hp -= dmg; this.invuln = 1.2; G.Audio.play('hurt'); g.shake = 4;
       if (this.hp <= 0) this.die(g);
     },
@@ -294,6 +296,7 @@
   };
   Enemy.prototype.kill = function (g) {
     this.dead = true; g.score += this.score || 100;
+    if ((this.score || 100) > 0) g.stats.kills++;
     const s = this.score || 100;
     g.floatText(cx(this), this.y, (s > 0 ? '+' : '') + s, s > 0 ? '#fff' : '#ff6060');
     this.onKill && this.onKill(g);
