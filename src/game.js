@@ -29,7 +29,10 @@
       this.missionIdx = i; this.mission = m;
       this.level = G.Level.fromSpec(m.level);
       this.entities = []; this.bullets = []; this.particles = []; this.texts = [];
-      this.player = null; this.ally = null; this.base = null; this.boss = null;
+      this.player = null; this.ally = null; this.base = null; this.boss = null; this.depot = null;
+      this.lifts = (m.level.lifts || []).map(l => new G.Lift(l[0], l[1], l[2]));
+      this.planted = false; this.escapeT = 0; this.rockT = 0;
+      this.darkCanvas = null;
       this.score = 0; this.lives = C.player.lives; this.thermal = false;
       this.firedTriggers = {}; this.radioQ = []; this.radioCur = null;
       this.timer = m.objective.time || 0;
@@ -48,6 +51,8 @@
           case 'O': this.entities.push(new G.Mine(s.x, s.y)); break;
           case 'U': this.entities.push(new G.SiteLauncher(s.x, s.y)); this.launchersLeft++; break;
           case 'Q': { const q = new G.Soldier(s.x, s.y); q.rpg = true; q.hp = 4; q.score = 200; this.entities.push(q); break; }
+          case 'V': this.entities.push(new G.Cart(s.x, s.y)); break;
+          case 'J': this.depot = new G.Depot(s.x, s.y); this.entities.push(this.depot); break;
           case 'Z': this.boss = new G.TollBooth(s.x, s.y); this.entities.push(this.boss); break;
           case 'X': this.base = new G.Base(s.x, s.y, m.objective.baseHp); break;
           case 'E': this.entities.push(new G.ExitFlag(s.x, s.y)); break;
@@ -88,7 +93,18 @@
       if (this.score > best) { save[m.id] = this.score; persist(); }
       G.Dialog.start(m.outro, () => { this.state = 'win'; G.Audio.stopMusic(); });
     },
-    reachExit() { if (this.mission.objective.type === 'reach') this.winMission(); },
+    reachExit() {
+      const t = this.mission.objective.type;
+      if (t === 'reach' || (t === 'demolish' && this.planted)) this.winMission();
+    },
+    plantCharge() {
+      const o = this.mission.objective;
+      this.planted = true; this.escapeT = o.escape || 20; this.shake = 6;
+      G.Audio.play('alarm');
+      for (const [c, r] of this.mission.level.door || []) this.level.tiles[r][c] = '.';
+      this.floatText(this.depot.x + 26, this.depot.y - 10, 'C4 PLANTED!', '#ff4040');
+      this.radioQ = []; this.radioCur = null; this.radio(this.mission.plantRadio);
+    },
     launcherDestroyed() {
       this.launchersLeft--; this.shake = 8;
       this.radio(G.pick(G.PRESIDENT_BARKS.launcher));
@@ -232,6 +248,7 @@
       }
       this.strikeQ = this.strikeQ.filter(st => st.t > -0.6);
 
+      for (const lf of this.lifts) lf.update(dt, this);
       this.player.update(dt, this);
       if (this.ally) this.ally.update(dt, this);
       if (this.base) this.base.update(dt, this);
@@ -257,6 +274,19 @@
         this.timer -= dt;
         if (this.timer <= 10 && Math.floor(this.timer) !== Math.floor(this.timer + dt)) G.Audio.play('alarm');
         if (this.timer <= 0) this.failMission('Missile launched! Too late.');
+      }
+      // Побег из рушащегося тоннеля
+      if (o.type === 'demolish' && this.planted && this.state === 'play') {
+        this.escapeT -= dt; this.rockT -= dt;
+        if (this.rockT <= 0) {
+          this.rockT = 0.25 + Math.random() * 0.3;
+          const rx = this.player.x + (Math.random() * 220 - 70);
+          let ry = 0; while (ry < this.level.pxH && this.level.solidAt(rx, ry)) ry += 4;
+          if (ry < this.level.pxH) { const b = new G.Bullet(rx, ry + 2, 0, 20, 'enemy', 1); b.grav = 500; b.rock = true; b.life = 3; this.bullets.push(b); }
+          this.shake = Math.max(this.shake, 2.5);
+        }
+        if (Math.floor(this.escapeT) !== Math.floor(this.escapeT + dt) && this.escapeT < 6) G.Audio.play('alarm');
+        if (this.escapeT <= 0) this.failMission('The tunnel collapsed on you.');
       }
       // Рация
       if (!this.radioCur && this.radioQ.length) this.radioCur = this.radioQ.shift();
@@ -321,6 +351,8 @@
       ctx.fillStyle = '#20160c'; ctx.fillRect(0, this.level.pxH, W, H - this.level.pxH + 10);
       if (this.thermal) { ctx.fillStyle = 'rgba(0,8,40,.78)'; ctx.fillRect(-10, -10, W + 20, H + 20); }
       if (this.base) this.base.draw(ctx, camX, this);
+      for (const lf of this.lifts) lf.draw(ctx, camX, this);
+      for (const [c, r] of this.mission.level.lamps || []) ctx.drawImage(G.SPR.lamp, c * T + 4 - camX, r * T);
       for (const e of this.entities) if (e.kind === 'truck') e.draw(ctx, camX, this);
       for (const e of this.entities) if (e.kind !== 'truck') e.draw(ctx, camX, this);
       if (this.ally) this.ally.draw(ctx, camX, this);
@@ -328,6 +360,7 @@
       for (const b of this.bullets) b.draw(ctx, camX, this);
       for (const p of this.particles) p.draw(ctx, camX, this);
       for (const t of this.texts) G.text(ctx, t.text, Math.round(t.x - camX), Math.round(t.y), { size: 7, align: 'center', color: t.color });
+      if (this.mission.dark) this.drawDarkness(camX);
       if (this.ally) this.ally.drawBubble(ctx, camX);
       for (const st of this.strikeQ) {
         if (st.fired) continue;
@@ -348,6 +381,27 @@
       }
     },
 
+    // Темнота: светит фонарь героя, лампы и взрывы
+    drawDarkness(camX) {
+      if (!this.darkCanvas) { this.darkCanvas = G.mkCanvas(W, H, () => {}); }
+      const dc = this.darkCanvas, d = dc.getContext('2d');
+      d.globalCompositeOperation = 'source-over';
+      d.clearRect(0, 0, W, H);
+      d.fillStyle = 'rgba(4,3,2,' + (this.mission.dark) + ')'; d.fillRect(0, 0, W, H);
+      d.globalCompositeOperation = 'destination-out';
+      const hole = (x, y, r) => {
+        const gr = d.createRadialGradient(x, y, r * 0.2, x, y, r);
+        gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        d.fillStyle = gr; d.fillRect(x - r, y - r, r * 2, r * 2);
+      };
+      const p = this.player;
+      hole(p.x + p.w / 2 + p.facing * 20 - camX, p.y + 8, 82 + Math.sin(this.time * 9) * 2);
+      for (const [c, r] of this.mission.level.lamps || []) hole(c * T + 8 - camX, r * T + 10, 58);
+      let n = 0;
+      for (const pt of this.particles) if ((pt.color === '#ffb030' || pt.color === '#fff3a0') && n++ < 14) hole(pt.x - camX, pt.y, 30);
+      ctx.drawImage(dc, 0, 0);
+    },
+
     drawHUD() {
       const p = this.player, o = this.mission.objective;
       ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(0, 0, W, 14);
@@ -362,6 +416,14 @@
       let obj = '';
       if (o.type === 'reach') obj = 'REACH THE FLAG →';
       if (o.type === 'boss') obj = 'SHUT DOWN THE TOLLBOOTH →';
+      if (o.type === 'demolish') {
+        if (!this.planted) obj = 'PLANT C4 AT THE DEPOT →';
+        else {
+          const t = Math.max(0, Math.ceil(this.escapeT));
+          obj = 'ESCAPE! 0:' + String(t).padStart(2, '0');
+          if (Math.floor(this.time * 4) % 2 === 0) obj = '⚠ ' + obj;
+        }
+      }
       const b = this.boss;
       if (b && b.active && !b.remove && b.x - this.camX < W + 40) {
         const bw = 160, bx = (W - bw) / 2, by = H - 12;

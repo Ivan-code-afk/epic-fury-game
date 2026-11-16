@@ -152,6 +152,18 @@ G.Backgrounds = {
     const g = ctx.createLinearGradient(0, 0, 0, H);
     th.sky.forEach((c, i) => g.addColorStop(i / (th.sky.length - 1), c));
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    if (th.cave) { // стены тоннеля: опорные балки и кабели
+      const off = camX * 0.4;
+      for (let i = -1; i < 9; i++) {
+        const bx = Math.round(i * 56 - (off % 56));
+        ctx.fillStyle = th.far; ctx.fillRect(bx, 0, 10, H);
+        ctx.fillStyle = th.near; ctx.fillRect(bx + 2, 0, 2, H);
+      }
+      ctx.strokeStyle = '#3a2e22'; ctx.beginPath();
+      for (let x = 0; x <= W; x += 8) ctx.lineTo(x, 60 + Math.sin((x + off) * 0.05) * 4);
+      ctx.stroke();
+      return;
+    }
     if (th.stars) {
       ctx.fillStyle = '#fff';
       for (let i = 0; i < 60; i++) {
@@ -198,6 +210,7 @@ G.Backgrounds = {
     desert: { sky: ['#f6b26b', '#ffd59a', '#ffe9c4'], sun: '#fff3c0', far: '#c99a6a', near: '#b3824f' },
     gulf:   { sky: ['#4a90c8', '#8cc4e8', '#d8eef8'], sun: '#fffbe0', far: '#7a9ab0', near: '#5c7f99' },
     city:   { sky: ['#e07a4a', '#f2a65a', '#f8d49a'], sun: '#ffe7b0', far: '#a46a50', near: '#7a4a3a', city: true },
+    tunnel: { sky: ['#120e0a', '#1e1712', '#120e0a'], far: '#2a211a', near: '#211a14', cave: true },
     night:  { sky: ['#05070f', '#111a33', '#22305a'], sun: '#e8e8ff', far: '#1a2240', near: '#10162a', stars: true, night: true },
   },
 };

@@ -42,9 +42,10 @@ Add an object to `G.MISSIONS` in `src/missions.js`:
   id: 'my', title: 'TITLE', subtitle: 'Description', theme: 'desert', // desert | gulf | city | night
   playable: true,
   ally: null,                        // 'president' | 'mossad' | null
-  objective: { type: 'reach' },      // reach | defend (waves) | launchers (time; add special: 'himars', strikes: 3) | boss
+  objective: { type: 'reach' },      // reach | defend (waves) | launchers (time; add special: 'himars', strikes: 3) | boss | demolish (escape: seconds)
   level: {
     ground: '#',                     // # sand, r rock, c concrete, d ship deck
+    // theme can also be 'tunnel'
     terrain: '3333344445555___3333', // ground height per column; _ water; space = pit
     platforms: [[column, row, length]],
     blocks: [[column, row, 'b' | 'x']],
@@ -59,7 +60,10 @@ Add an object to `G.MISSIONS` in `src/missions.js`:
 Objects: `P` player, `A` partner, `S` soldier, `T` machine-gunner, `L` launcher truck, `K` civilian truck,
 `X` base, `E` exit flag, `H` medkit, `M` M249, `N` Stinger, `G` grenades, `Y` Tie of Fury,
 `B` speedboat (place over water), `O` jumping sea mine (over water), `D` drone (wakes up when the player is near), `Z` tollbooth boss,
-`U` armored open launcher, `Q` RPG gunner, `R` radio (+2 HIMARS strikes).
+`U` armored open launcher, `Q` RPG gunner, `R` radio (+2 HIMARS strikes),
+`V` missile rail cart, `J` missile depot (touch to plant C4).
+
+Extra level fields: `lifts: [[column, topRow, bottomRow]]`, `lamps: [[column, row]]`, `door: [[column, row]]` (tiles removed when C4 is planted). Mission field `dark: 0.86` turns on darkness with a flashlight.
 
 While jumping, hold DOWN to shoot straight down.
 
@@ -68,4 +72,4 @@ All sprites live in `G.SPR` (`src/sprites.js`). To replace one, load an `Image` 
 e.g. `G.SPR.president[0] = myImage`. Frame sizes are noted in the code.
 
 ## Status
-Missions 1–7 are playable. The rest show as "COMING SOON" in the menu.
+Missions 1–8 are playable. The rest show as "COMING SOON" in the menu.

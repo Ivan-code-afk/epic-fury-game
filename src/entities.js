@@ -58,6 +58,12 @@
       this.h = this.crouch ? 13 : 18;
       this.y += oldH - this.h;
       const r = L.move(this, dt);
+      for (const lf of g.lifts || []) {
+        if (this.vy >= 0 && this.x + this.w > lf.x + 2 && this.x < lf.x + lf.w - 2) {
+          const bottom = this.y + this.h;
+          if (bottom >= lf.y - 3 && bottom <= lf.y + 8) { this.y = lf.y - this.h; this.vy = 0; r.ground = true; }
+        }
+      }
       this.onGround = r.ground;
 
       if (move && this.onGround) this.anim += dt * 10; else if (!move) this.anim = 0;
@@ -548,6 +554,78 @@
     },
   });
 
+  // Ракетная тележка: катается по рельсам, давит, взрывается от выстрелов
+  G.Cart = function (x, y) {
+    Enemy.call(this, { kind: 'cart', x, y, w: 40, h: 16, hp: 8, facing: -1, score: 400, t: 0 });
+  };
+  G.Cart.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.Cart.prototype, {
+    update(dt, g) {
+      this.flash -= dt; this.t += dt;
+      if (this.dead) { g.explode(cx(this), cy(this), 40, 'player', 8); this.remove = true; return; }
+      this.vx = this.facing * 62;
+      this.vy = Math.min(this.vy + C.GRAVITY * dt, 520);
+      const r = g.level.move(this, dt);
+      const ahead = this.facing > 0 ? this.x + this.w + 2 : this.x - 2;
+      if (r.wall || (r.ground && !g.level.solidAt(ahead, this.y + this.h + 4))) this.facing *= -1;
+      if (Math.random() < 0.2) g.particles.push(new G.Particle(this.facing > 0 ? this.x : this.x + this.w, this.y + this.h - 1, -this.facing * 40, -30, 0.25, '#ffcc66', 1, 1));
+      const p = g.player;
+      if (!p.dead && overlap(this, p)) p.hurt(g, 2);
+    },
+    draw(ctx, camX) {
+      let img = G.SPR.cart;
+      if (this.flash > 0) img = G.tintCache(img, '#fff');
+      drawSprite(ctx, img, this.x - camX - 1, this.y - 2, this.facing < 0);
+      if (Math.floor(this.t * 4) % 2) { ctx.fillStyle = '#ffd23f'; ctx.fillRect(Math.round((this.facing < 0 ? this.x + 38 : this.x) - camX), Math.round(this.y + 5), 3, 2); }
+    },
+  });
+
+  // Лифт: двигается вверх-вниз между двумя высотами
+  G.Lift = function (col, topRow, bottomRow) {
+    const T = C.TILE;
+    Object.assign(this, { kind: 'lift', x: col * T, w: 2 * T, top: topRow * T, bottom: bottomRow * T, y: bottomRow * T, dir: -1, wait: 1 });
+  };
+  G.Lift.prototype = {
+    update(dt, g) {
+      if (this.wait > 0) { this.wait -= dt; return; }
+      const prev = this.y;
+      this.y += this.dir * 48 * dt;
+      if (this.y <= this.top) { this.y = this.top; this.dir = 1; this.wait = 2; }
+      if (this.y >= this.bottom) { this.y = this.bottom; this.dir = -1; this.wait = 1.2; }
+      // везём стоящего игрока
+      const p = g.player, bottom = p.y + p.h;
+      if (p.onGround && p.x + p.w > this.x + 2 && p.x < this.x + this.w - 2 && Math.abs(bottom - prev) < 3) p.y += this.y - prev;
+    },
+    draw(ctx, camX) {
+      const x = Math.round(this.x - camX), y = Math.round(this.y);
+      ctx.fillStyle = '#444'; ctx.fillRect(x + 3, this.top - 40, 2, y - this.top + 40); ctx.fillRect(x + this.w - 5, this.top - 40, 2, y - this.top + 40);
+      ctx.fillStyle = '#d4af37'; ctx.fillRect(x, y, this.w, 4);
+      ctx.fillStyle = '#222'; for (let i = 0; i < this.w; i += 6) ctx.fillRect(x + i, y, 3, 4);
+      ctx.fillStyle = '#666'; ctx.fillRect(x + 2, y + 4, this.w - 4, 3);
+    },
+  };
+
+  // Склад ракет: коснись, чтобы заложить заряд
+  G.Depot = function (x, y) {
+    Object.assign(this, { kind: 'depot', x: x - 18, y: y + 16 - 44, w: 52, h: 44, planted: false, t: 0 });
+  };
+  G.Depot.prototype = {
+    update(dt, g) {
+      this.t += dt;
+      if (!this.planted && !g.player.dead && overlap(this, g.player)) { this.planted = true; g.plantCharge(this); }
+    },
+    draw(ctx, camX) {
+      const x = Math.round(this.x - camX);
+      ctx.drawImage(G.SPR.depot, x, Math.round(this.y));
+      if (this.planted) {
+        ctx.fillStyle = '#3a3a2a'; ctx.fillRect(x + 20, this.y + 24, 12, 8);
+        ctx.fillStyle = Math.floor(this.t * 6) % 2 ? '#ff2020' : '#400'; ctx.fillRect(x + 24, this.y + 26, 4, 3);
+      } else if (Math.floor(this.t * 2) % 2) {
+        G.text(ctx, 'PLANT C4', x + 26, this.y - 12, { size: 7, align: 'center', color: '#ffd23f' });
+      }
+    },
+  };
+
   // Ракета РПГ (вражеская)
   G.EnemyRocket = function (x, y, dir) {
     Object.assign(this, { x, y, vx: dir * 60, dir, life: 3, owner: 'enemy' });
@@ -609,6 +687,7 @@
     },
     draw(ctx, camX) {
       if (this.bill) { ctx.drawImage(G.SPR.bill, Math.round(this.x - camX) - 5, Math.round(this.y) - 2); return; }
+      if (this.rock) { ctx.fillStyle = '#6f6152'; ctx.fillRect(Math.round(this.x - camX) - 3, Math.round(this.y) - 3, 6, 6); ctx.fillStyle = '#8a7a6a'; ctx.fillRect(Math.round(this.x - camX) - 3, Math.round(this.y) - 3, 6, 2); return; }
       ctx.fillStyle = this.color;
       if (Math.abs(this.vy) > Math.abs(this.vx)) ctx.fillRect(Math.round(this.x - camX) - 1, Math.round(this.y) - 2, 2, 4);
       else ctx.fillRect(Math.round(this.x - camX) - 2, Math.round(this.y) - 1, 4, 2);

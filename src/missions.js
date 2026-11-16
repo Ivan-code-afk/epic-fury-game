@@ -258,7 +258,45 @@ G.MISSIONS = [
       ['president', 'Five out of five. Perfect score. They should give me the island. I\'d make it a golf course.', 'happy'],
     ],
   },
-  { id: 'missilecity', title: 'MISSILE CITY', subtitle: 'Underground tunnels with missiles on rails.', theme: 'night', playable: false },
+  {
+    id: 'missilecity', title: 'MISSILE CITY', subtitle: 'Tunnels, rail carts, a depot to blow. Then run.', theme: 'tunnel', playable: true,
+    objective: { type: 'demolish', escape: 20 },
+    dark: 0.86,
+    level: {
+      ground: 'r',
+      terrain: R('2', 140),
+      platforms: [
+        [0, 0, 140, 'r'], [0, 1, 140, 'r'],          // потолок
+        [0, 6, 30, 'r'], [32, 6, 44, 'r'],          // перекрытие между этажами
+        [88, 8, 6], [96, 5, 5], [104, 8, 5], [118, 7, 4],
+      ],
+      blocks: [[33, 7, 'r'], [33, 8, 'r'], [33, 9, 'r'], [33, 10, 'r'], [40, 5, 'x'], [62, 5, 'b'], [114, 10, 'x'], [114, 9, 'x'], [134, 2, 'c'], [134, 3, 'c'], [134, 4, 'c'], [134, 5, 'c'], [134, 6, 'c'], [134, 7, 'c'], [134, 8, 'c'], [134, 9, 'c'], [134, 10, 'c']],
+      door: [[134, 2], [134, 3], [134, 4], [134, 5], [134, 6], [134, 7], [134, 8], [134, 9], [134, 10]],
+      lifts: [[30, 6, 11]],
+      lamps: [[6, 7], [20, 7], [26, 7], [12, 2], [40, 2], [55, 2], [70, 2], [50, 7], [86, 2], [100, 2], [112, 2], [124, 2], [138, 2]],
+      objects: 'P2 S12 V22 S27 H8:5 G14:5 S20:5 S38:5 T45:5 V52:5 S58:5 Q66:5 M70:5 S73:5 S45 S60 H66 G40 V84 S88 Q91:7 Q98:4 S100 V106 T110 S116 Q120:6 S124 J127 S131 E138',
+    },
+    intro: [
+      ['hq', 'Underground missile city. Kilometers of tunnels carved into the mountain. Missiles ride on rails in there.'],
+      ['hq', 'Find the main depot and plant C4. Then you have twenty seconds to get out through the blast door.'],
+      ['president', 'A city? Underground? No sunlight, no views, no golf. Terrible real estate. Blow it up.'],
+      ['hero', 'It\'s dark in there, sir.'],
+      ['president', 'You have a flashlight. I have a flashlight too. Mine is gold.', 'happy'],
+    ],
+    triggers: [
+      { col: 16, radio: ['hq', 'Rail cart! Shoot it and it goes up like fireworks. Don\'t stand in its way.'] },
+      { col: 28, radio: ['hq', 'Wall ahead. Take the lift to the upper level.'] },
+      { col: 76, radio: ['president', 'Look at all those missiles. Very expensive. Very bad. Very boom.'] },
+      { col: 112, radio: ['hq', 'The depot is just ahead. The blast door opens when the charge is set.'] },
+    ],
+    plantRadio: ['hq', 'Charge set! The blast door is open. RUN!'],
+    outro: [
+      ['hq', 'Massive detonation in the mountain. Missile City is gone.'],
+      ['president', 'They call it a missile city. Now it\'s a missile village. A small one. Very small.', 'happy'],
+      ['hero', 'Sir, I lost my eyebrows.'],
+      ['president', 'Eyebrows grow back. Victories are forever.', 'happy'],
+    ],
+  },
   { id: 'nuke', title: 'FIND THE BOMB', subtitle: 'A bunker full of centrifuges and "Peaceful Atom" crates.', theme: 'night', playable: false },
   { id: 'hostages', title: 'FORGOTTEN HOSTAGES', subtitle: 'A prison. Free the captives.', theme: 'city', playable: false },
   { id: 'lucas', title: 'SHAHED IN REVERSE', subtitle: 'Fly the American LUCAS drone.', theme: 'desert', playable: false },
