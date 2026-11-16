@@ -231,7 +231,33 @@ G.MISSIONS = [
   },
 
   // ------------------------------------------------------------------ 7-12
-  { id: 'larak', title: 'LARAK ISLAND', subtitle: 'Clear the launchers on the island. Call in HIMARS by radio.', theme: 'gulf', playable: false },
+  {
+    id: 'larak', title: 'LARAK ISLAND', subtitle: 'Armored launchers on the island. Call in HIMARS.', theme: 'gulf', playable: true,
+    objective: { type: 'launchers', time: 240, special: 'himars', strikes: 3 },
+    level: {
+      ground: '#',
+      terrain: R('3', 18) + R('4', 8) + R('5', 10) + R('6', 8) + R('4', 12) + R(' ', 3) + R('4', 14) + R('5', 12) + R('3', 16) + R('_', 3) + R('3', 20) + R('5', 10) + R('4', 16),
+      platforms: [[30, 5, 4], [64, 6, 4], [90, 7, 5], [114, 7, 4], [137, 6, 4]],
+      blocks: [[24, 8, 'b'], [46, 8, 'x'], [47, 8, 'x'], [82, 7, 'b'], [109, 9, 'x'], [128, 6, 'b']],
+      objects: 'P2 R6 S12 Q20 S27 U32 T40 S49 H52 S62 Q66 U70 S76 T80 G91:6 S88 U94 Q98 R106 S108 S112 M115:6 U120 T126 Q130 H136 S138 U142 R139:5',
+    },
+    intro: [
+      ['hq', 'Larak Island. Five launchers aimed at the shipping lanes. They\'re armored, so small arms will take a while.'],
+      ['hq', 'Press V to laser-mark a spot ahead of you. HIMARS hits it a second and a half later. Three strikes to start; radios give you more.'],
+      ['president', 'HIMARS. Beautiful name. I\'d put it on a hotel. HIMARS TOWER.', 'happy'],
+      ['hero', 'Sir, it\'s a rocket system.'],
+      ['president', 'A rocket system with a hotel name. Even better. Four minutes, Sergeant. Go.'],
+    ],
+    triggers: [
+      { col: 16, radio: ['hq', 'RPG gunner ahead. Their rockets are slow. Jump them.'] },
+      { col: 56, radio: ['hq', 'Gap in the cliff. Mind your step.'] },
+      { col: 100, radio: ['president', 'Water again! Who keeps putting water everywhere?'] },
+    ],
+    outro: [
+      ['hq', 'All five launchers destroyed. The shipping lanes are safe.'],
+      ['president', 'Five out of five. Perfect score. They should give me the island. I\'d make it a golf course.', 'happy'],
+    ],
+  },
   { id: 'missilecity', title: 'MISSILE CITY', subtitle: 'Underground tunnels with missiles on rails.', theme: 'night', playable: false },
   { id: 'nuke', title: 'FIND THE BOMB', subtitle: 'A bunker full of centrifuges and "Peaceful Atom" crates.', theme: 'night', playable: false },
   { id: 'hostages', title: 'FORGOTTEN HOSTAGES', subtitle: 'A prison. Free the captives.', theme: 'city', playable: false },
@@ -244,5 +270,6 @@ G.PRESIDENT_BARKS = {
   rage:    [['president', 'My tie! Now you\'re me. Just with a helmet.', 'rambo']],
   civilian:[['president', 'Those were WATERMELONS! Beautiful watermelons. I feel bad for them.'], ['president', 'You blew up a carpet van. Those were nice carpets.']],
   death:   [['president', 'Get up, Sergeant! Winners don\'t lie down. They just rest.'], ['president', 'That\'s not a defeat. It\'s a tactical pause.']],
+  himars:  [['hq', 'HIMARS inbound. Keep the laser on target.'], ['president', 'Here comes the HIMARS! Beautiful rockets. The best rockets.', 'happy']],
   launcher:[['president', 'Boom! Beautiful. I\'d put that on a magazine cover.', 'happy'], ['hq', 'Launcher destroyed.']],
 };

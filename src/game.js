@@ -46,13 +46,16 @@
           case 'D': { const d = new G.Drone(s.x, s.y, 50); d.dormant = true; this.entities.push(d); break; }
           case 'B': this.entities.push(new G.Speedboat(s.x, s.y)); break;
           case 'O': this.entities.push(new G.Mine(s.x, s.y)); break;
+          case 'U': this.entities.push(new G.SiteLauncher(s.x, s.y)); this.launchersLeft++; break;
+          case 'Q': { const q = new G.Soldier(s.x, s.y); q.rpg = true; q.hp = 4; q.score = 200; this.entities.push(q); break; }
           case 'Z': this.boss = new G.TollBooth(s.x, s.y); this.entities.push(this.boss); break;
           case 'X': this.base = new G.Base(s.x, s.y, m.objective.baseHp); break;
           case 'E': this.entities.push(new G.ExitFlag(s.x, s.y)); break;
-          default: if ('HMNGY'.includes(s.type)) this.entities.push(new G.Pickup(s.type, s.x, s.y));
+          default: if ('HMNGYR'.includes(s.type)) this.entities.push(new G.Pickup(s.type, s.x, s.y));
         }
       }
       if (!this.player) this.player = new G.Player(32, 100);
+      this.strikes = m.objective.strikes || 0; this.strikeQ = [];
       this.player.ammo.stinger = 0;
       this.camX = 0;
       this.state = 'briefing';
@@ -106,6 +109,20 @@
       this.shake = 6; G.Audio.play('alarm');
     },
     bossDefeated() { if (this.mission.objective.type === 'boss') this.winMission(); },
+
+    // ---------- HIMARS ----------
+    callStrike() {
+      if (this.strikeQ.length) return;
+      if (this.strikes <= 0) { this.radio(['hq', 'No HIMARS strikes left. Find a radio.']); G.Audio.play('hit'); return; }
+      const p = this.player;
+      const x = Math.max(16, Math.min(this.level.pxW - 16, p.x + p.w / 2 + p.facing * 120));
+      let y = 0;
+      while (y < this.level.pxH && !this.level.solidAt(x, y)) y += 4;
+      this.strikes--;
+      this.strikeQ.push({ x, y, t: 1.6 });
+      G.Audio.play('alarm');
+      this.radio(G.pick(G.PRESIDENT_BARKS.himars));
+    },
 
     presidentBark(kind) { const l = G.PRESIDENT_BARKS[kind]; if (l) this.radio(G.pick(l)); },
 
@@ -201,7 +218,19 @@
       // --- play ---
       if (I.pressed('start')) { this.state = 'pause'; return; }
       const o = this.mission.objective;
-      if (I.pressed('special') && o.type === 'launchers') { this.thermal = !this.thermal; G.Audio.play('blip'); }
+      if (I.pressed('special')) {
+        if (o.special === 'himars') this.callStrike();
+        else if (o.type === 'launchers') { this.thermal = !this.thermal; G.Audio.play('blip'); }
+      }
+      for (const st of this.strikeQ) {
+        st.t -= dt;
+        if (st.t <= 0 && !st.fired) {
+          st.fired = true;
+          [-22, 0, 22].forEach((dx, i) => this.bullets.push(new G.HimarsRocket(st.x + dx, i * 0.15)));
+          G.Audio.play('rocket');
+        }
+      }
+      this.strikeQ = this.strikeQ.filter(st => st.t > -0.6);
 
       this.player.update(dt, this);
       if (this.ally) this.ally.update(dt, this);
@@ -300,6 +329,17 @@
       for (const p of this.particles) p.draw(ctx, camX, this);
       for (const t of this.texts) G.text(ctx, t.text, Math.round(t.x - camX), Math.round(t.y), { size: 7, align: 'center', color: t.color });
       if (this.ally) this.ally.drawBubble(ctx, camX);
+      for (const st of this.strikeQ) {
+        if (st.fired) continue;
+        const p = this.player, tx = Math.round(st.x - camX), ty = Math.round(st.y);
+        if (Math.floor(this.time * 20) % 2) {
+          ctx.strokeStyle = 'rgba(255,40,40,.8)'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(Math.round(p.x + p.w / 2 + p.facing * 8 - camX), Math.round(p.y + 8)); ctx.lineTo(tx, ty); ctx.stroke();
+        }
+        ctx.strokeStyle = '#ff3030'; ctx.beginPath(); ctx.arc(tx, ty - 2, 6 + Math.sin(this.time * 12) * 2, 0, 7); ctx.stroke();
+        ctx.fillStyle = '#ff3030'; ctx.fillRect(tx - 9, ty - 2, 18, 1); ctx.fillRect(tx, ty - 11, 1, 18);
+        G.text(ctx, 'HIMARS ' + Math.max(0, st.t).toFixed(1), tx, ty - 24, { size: 7, align: 'center', color: '#ff6060' });
+      }
       ctx.restore();
       if (this.thermal) {
         G.text(ctx, '◉ THERMAL', W - 6, H - 14, { size: 7, align: 'right', color: '#ff8a20' });
@@ -338,11 +378,12 @@
           G.text(ctx, 'BASE', W - 74, 14, { size: 7, align: 'right' });
         }
       }
+      if (o.special === 'himars') G.text(ctx, 'HIMARS ×' + this.strikes + '  [V]', 4, 16, { size: 7, color: this.strikes ? '#ff8a20' : '#777' });
       if (o.type === 'launchers') {
         const t = Math.max(0, Math.ceil(this.timer));
         const mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
         obj = 'LAUNCHERS ' + this.launchersLeft + '  ⏱ ' + mm + ':' + ss;
-        if (!this.thermal && this.time % 6 < 3 && this.state === 'play') G.text(ctx, 'V — thermal vision', W - 6, 16, { size: 7, align: 'right', color: '#ff8a20' });
+        if (!o.special && !this.thermal && this.time % 6 < 3 && this.state === 'play') G.text(ctx, 'V — thermal vision', W - 6, 16, { size: 7, align: 'right', color: '#ff8a20' });
       }
       const urgent = o.type === 'launchers' && this.timer < 30 && Math.floor(this.time * 4) % 2;
       G.text(ctx, obj, W - 6, 3, { size: 8, align: 'right', color: urgent ? '#ff4040' : '#fff' });

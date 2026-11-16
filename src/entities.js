@@ -233,8 +233,14 @@
         this.facing = Math.sign(dx) || -1; this.vx = 0;
         this.fireCd -= dt;
         if (this.fireCd <= 0) {
-          this.fireCd = 1.3 + Math.random() * 0.6;
-          g.bullets.push(new G.Bullet(cx(this) + this.facing * 9, this.y + 8, this.facing * 140, 0, 'enemy', 1));
+          if (this.rpg) {
+            this.fireCd = 2.6 + Math.random();
+            g.bullets.push(new G.EnemyRocket(cx(this) + this.facing * 10, this.y + 7, this.facing));
+            G.Audio.play('rocket');
+          } else {
+            this.fireCd = 1.3 + Math.random() * 0.6;
+            g.bullets.push(new G.Bullet(cx(this) + this.facing * 9, this.y + 8, this.facing * 140, 0, 'enemy', 1));
+          }
         }
       } else {
         this.vx = this.facing * 28;
@@ -251,8 +257,8 @@
     onKill() { this.vy = -150; G.Audio.play('hurt'); },
     draw(ctx, camX, g) {
       const f = this.dead ? 'jump' : this.vx ? Math.floor(this.anim) % 4 : 0;
-      let img = G.SPR.irgc[f];
-      if (this.flash > 0) img = G.SPR.flash.irgc;
+      let img = (this.rpg ? G.SPR.rpg : G.SPR.irgc)[f];
+      if (this.flash > 0) img = G.tintCache(img, '#fff');
       if (g.thermal) img = G.SPR.hot.irgc;
       if (this.dead) ctx.globalAlpha = Math.max(0, this.deadT / 0.6);
       drawSprite(ctx, img, this.x - camX - 4, this.y - 2, this.facing < 0);
@@ -524,6 +530,66 @@
     },
   });
 
+  // Открытая пусковая установка (миссия «Остров Ларак»): бронированная, лучше всего — HIMARS
+  G.SiteLauncher = function (x, y) {
+    Enemy.call(this, { kind: 'launcher', isLauncher: true, x: x - 14, y: y + 16 - 28, w: 44, h: 28, hp: 24, score: 1500, t: Math.random() * 3 });
+  };
+  G.SiteLauncher.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.SiteLauncher.prototype, {
+    update(dt, g) {
+      this.flash -= dt; this.t += dt;
+      if (this.dead) { g.explode(cx(this), cy(this), 42, 'none'); g.launcherDestroyed(this); this.remove = true; return; }
+      if (Math.random() < 0.15) g.particles.push(new G.Particle(this.x + 12, this.y + 14, (Math.random() - 0.5) * 10, -25, 1, '#ddd', 3, -0.08));
+    },
+    draw(ctx, camX) {
+      let img = G.SPR.launcher;
+      if (this.flash > 0) img = G.tintCache(img, '#fff');
+      ctx.drawImage(img, Math.round(this.x - camX), Math.round(this.y));
+    },
+  });
+
+  // Ракета РПГ (вражеская)
+  G.EnemyRocket = function (x, y, dir) {
+    Object.assign(this, { x, y, vx: dir * 60, dir, life: 3, owner: 'enemy' });
+  };
+  G.EnemyRocket.prototype = {
+    update(dt, g) {
+      this.vx += this.dir * 160 * dt; this.x += this.vx * dt; this.life -= dt;
+      if (Math.random() < 0.6) g.particles.push(new G.Particle(this.x - this.dir * 5, this.y, 0, 0, 0.4, '#aaa', 3, -0.1));
+      const p = g.player;
+      const hitP = !p.dead && overlap({ x: this.x - 3, y: this.y - 2, w: 6, h: 4 }, p);
+      if (this.life <= 0 || hitP || g.level.solidAt(this.x, this.y)) { this.remove = true; g.explode(this.x, this.y, 18, 'enemy', 2); }
+    },
+    draw(ctx, camX) {
+      const x = Math.round(this.x - camX), y = Math.round(this.y);
+      ctx.fillStyle = '#4a5a2a'; ctx.fillRect(x - 5, y - 1, 8, 3);
+      ctx.fillStyle = '#8a3a1a'; ctx.fillRect(this.dir > 0 ? x + 3 : x - 7, y - 2, 4, 5);
+      ctx.fillStyle = '#ffb030'; ctx.fillRect(this.dir > 0 ? x - 7 : x + 3, y, 2, 1);
+    },
+  };
+
+  // Ракета HIMARS: падает с неба на отмеченную точку
+  G.HimarsRocket = function (x, delay) {
+    Object.assign(this, { x, y: -40, vy: 520, delay: delay || 0, owner: 'player' });
+  };
+  G.HimarsRocket.prototype = {
+    update(dt, g) {
+      if (this.delay > 0) { this.delay -= dt; return; }
+      this.y += this.vy * dt;
+      g.particles.push(new G.Particle(this.x + (Math.random() - 0.5) * 2, this.y - 8, 0, -10, 0.5, '#ccc', 3, -0.05));
+      if (this.y > 0 && (g.level.solidAt(this.x, this.y) || this.y > g.level.pxH)) {
+        this.remove = true; g.explode(this.x, this.y, 42, 'player', 15); g.shake = 10;
+      }
+    },
+    draw(ctx, camX) {
+      if (this.delay > 0) return;
+      const x = Math.round(this.x - camX), y = Math.round(this.y);
+      ctx.fillStyle = '#e8e8e8'; ctx.fillRect(x - 2, y - 14, 4, 12);
+      ctx.fillStyle = '#c22'; ctx.fillRect(x - 2, y - 2, 4, 3);
+      ctx.fillStyle = '#ffb030'; ctx.fillRect(x - 1, y - 18, 2, 4);
+    },
+  };
+
   // ============ СНАРЯДЫ ============
   G.Bullet = function (x, y, vx, vy, owner, dmg) {
     Object.assign(this, { x, y, vx, vy, owner, dmg, life: 1.4, w: 3, h: 2, color: owner === 'enemy' ? '#ff9a3a' : '#fff6a0' });
@@ -599,7 +665,7 @@
 
   // ============ ПРЕДМЕТЫ ============
   G.Pickup = function (type, x, y) {
-    const img = { H: 'health', M: 'mg', N: 'stinger', G: 'grenades', Y: 'tie' }[type];
+    const img = { H: 'health', M: 'mg', N: 'stinger', G: 'grenades', Y: 'tie', R: 'radio' }[type];
     Object.assign(this, { kind: 'pickup', type, img, x: x + 2, y: y + 2, w: 12, h: 12, t: Math.random() * 6 });
   };
   G.Pickup.prototype = {
@@ -614,6 +680,7 @@
         N: () => { p.weapon = 'stinger'; p.ammo.stinger += C.weapons.stinger.ammo; return 'STINGER!'; },
         G: () => { p.grenades += 3; return '+3 GRENADES'; },
         Y: () => { p.rage = C.tieRage.duration; g.presidentBark('rage'); return 'TIE OF FURY!'; },
+        R: () => { g.strikes = (g.strikes || 0) + 2; return 'HIMARS +2'; },
       }[this.type]();
       g.floatText(cx(this), this.y - 6, msg, '#ffd23f');
     },

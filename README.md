@@ -14,7 +14,7 @@ Open `index.html` in a browser. It also works on GitHub Pages (Settings → Page
 | Jump | X / K / Space | A |
 | Fire | Z / J | B |
 | Grenade | C / L | G |
-| Thermal vision | V / I | V |
+| Thermal vision / call HIMARS | V / I | V |
 | Pause | Enter / Esc | II |
 | Sound | M | — |
 
@@ -42,7 +42,7 @@ Add an object to `G.MISSIONS` in `src/missions.js`:
   id: 'my', title: 'TITLE', subtitle: 'Description', theme: 'desert', // desert | gulf | city | night
   playable: true,
   ally: null,                        // 'president' | 'mossad' | null
-  objective: { type: 'reach' },      // reach | defend (waves) | launchers (time) | boss
+  objective: { type: 'reach' },      // reach | defend (waves) | launchers (time; add special: 'himars', strikes: 3) | boss
   level: {
     ground: '#',                     // # sand, r rock, c concrete, d ship deck
     terrain: '3333344445555___3333', // ground height per column; _ water; space = pit
@@ -58,7 +58,8 @@ Add an object to `G.MISSIONS` in `src/missions.js`:
 
 Objects: `P` player, `A` partner, `S` soldier, `T` machine-gunner, `L` launcher truck, `K` civilian truck,
 `X` base, `E` exit flag, `H` medkit, `M` M249, `N` Stinger, `G` grenades, `Y` Tie of Fury,
-`B` speedboat (place over water), `O` jumping sea mine (over water), `D` drone (wakes up when the player is near), `Z` tollbooth boss.
+`B` speedboat (place over water), `O` jumping sea mine (over water), `D` drone (wakes up when the player is near), `Z` tollbooth boss,
+`U` armored open launcher, `Q` RPG gunner, `R` radio (+2 HIMARS strikes).
 
 While jumping, hold DOWN to shoot straight down.
 
@@ -67,4 +68,4 @@ All sprites live in `G.SPR` (`src/sprites.js`). To replace one, load an `Image` 
 e.g. `G.SPR.president[0] = myImage`. Frame sizes are noted in the code.
 
 ## Status
-Missions 1–6 are playable. The rest show as "COMING SOON" in the menu.
+Missions 1–7 are playable. The rest show as "COMING SOON" in the menu.
