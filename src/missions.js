@@ -377,7 +377,36 @@ G.MISSIONS = [
       ['president', 'Of course they do. Everybody does.', 'happy'],
     ],
   },
-  { id: 'lucas', title: 'SHAHED IN REVERSE', subtitle: 'Fly the American LUCAS drone.', theme: 'desert', playable: false },
+  {
+    id: 'lucas', title: 'SHAHED IN REVERSE', subtitle: 'Fly the American LUCAS drone to the factory that designed it.', theme: 'desert', playable: true,
+    objective: { type: 'flight', speed: 45 },
+    level: {
+      ground: 'r',
+      terrain: R('2', 20) + R('3', 10) + R('5', 8) + R('7', 6) + R('4', 10) + R('2', 14) + R('3', 12) + R('6', 10) + R('3', 10) + R('2', 20) + R('4', 10) + R('6', 8) + R('3', 12) + R('2', 40),
+      platforms: [
+        [100, 0, 20, 'r'], [100, 1, 20, 'r'], [100, 2, 20, 'r'], [104, 3, 6, 'r'],
+        [120, 0, 18, 'r'], [120, 1, 18, 'r'], [124, 2, 8, 'r'],
+      ],
+      objects: 'P2:4 a24 D40:3 a48 H52:4 s60 D66:2 D70:4 a74 G78:3 s86 a95 D105:5 a112 s126 H134:4 D140:3 a144 s152 a158 G160:4 D164:3 a170 f176',
+    },
+    intro: [
+      ['hq', 'New approach. LUCAS: our cheap one-way attack drone, modeled on the Shahed. Tonight you fly one remotely.'],
+      ['president', 'I asked them to add a gun. And a cupholder. They added the gun.', 'happy'],
+      ['hq', 'Arrows fly, Z fires, C drops bombs. When the drone factory is close, press V to dive into it.'],
+      ['hero', 'Sending their own design back to them.'],
+      ['president', 'Return to sender. With interest. Big interest.'],
+    ],
+    triggers: [
+      { col: 14, radio: ['hq', 'Anti-aircraft guns on the ground. Bomb them or fly high.'] },
+      { col: 52, radio: ['hq', 'SAM site! Its missiles home in. Shoot them down or out-turn them.'] },
+      { col: 92, radio: ['president', 'A canyon. Don\'t scratch the paint. That drone is a rental.'] },
+      { col: 160, radio: ['hq', 'Drone factory ahead. Get close and press V.'] },
+    ],
+    outro: [
+      ['hq', 'Direct hit. The drone factory is out of business.'],
+      ['president', 'They made drones. We made a better drone and sent it back. That\'s called a trade deal.', 'happy'],
+    ],
+  },
   { id: 'final', title: 'THE INVISIBLE AYATOLLAH', subtitle: 'Finale. The boss hides behind holograms.', theme: 'city', playable: false },
 ];
 
@@ -387,6 +416,7 @@ G.PRESIDENT_BARKS = {
   civilian:[['president', 'Those were WATERMELONS! Beautiful watermelons. I feel bad for them.'], ['president', 'You blew up a carpet van. Those were nice carpets.']],
   death:   [['president', 'Get up, Sergeant! Winners don\'t lie down. They just rest.'], ['president', 'That\'s not a defeat. It\'s a tactical pause.']],
   scientist: [['president', 'That was a scientist! He was building... peace. Allegedly.'], ['hq', 'Civilian down. Watch your fire, Sergeant.']],
+  dive:    [['president', 'Dive! Dive! Like my approval ratings! No, wait...'], ['hq', 'Terminal dive. Impact in three... two...']],
   himars:  [['hq', 'HIMARS inbound. Keep the laser on target.'], ['president', 'Here comes the HIMARS! Beautiful rockets. The best rockets.', 'happy']],
   launcher:[['president', 'Boom! Beautiful. I\'d put that on a magazine cover.', 'happy'], ['hq', 'Launcher destroyed.']],
 };

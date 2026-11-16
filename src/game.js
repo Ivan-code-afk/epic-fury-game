@@ -29,7 +29,7 @@
       this.missionIdx = i; this.mission = m;
       this.level = G.Level.fromSpec(m.level);
       this.entities = []; this.bullets = []; this.particles = []; this.texts = [];
-      this.player = null; this.ally = null; this.base = null; this.boss = null; this.depot = null;
+      this.player = null; this.ally = null; this.base = null; this.boss = null; this.depot = null; this.target = null;
       this.lifts = (m.level.lifts || []).map(l => new G.Lift(l[0], l[1], l[2]));
       this.hostages = []; this.followers = []; this.alarmCount = 0;
       this.planted = false; this.escapeT = 0; this.rockT = 0;
@@ -41,7 +41,10 @@
       let k = 0;
       for (const s of this.level.spawns) {
         switch (s.type) {
-          case 'P': this.player = new G.Player(s.x, s.y); break;
+          case 'P': this.player = m.objective.type === 'flight' ? new G.Flyer(s.x, s.y) : new G.Player(s.x, s.y); break;
+          case 'a': this.entities.push(new G.AAGun(s.x, s.y)); break;
+          case 's': this.entities.push(new G.SamSite(s.x, s.y)); break;
+          case 'f': this.target = new G.Factory(s.x, s.y); this.entities.push(this.target); break;
           case 'A': if (m.ally) this.ally = new G.Ally(m.ally, s.x, s.y, m.allyBarks); break;
           case 'S': this.entities.push(new G.Soldier(s.x, s.y)); break;
           case 'T': this.entities.push(new G.Turret(s.x, s.y)); break;
@@ -75,7 +78,7 @@
         const crates = this.entities.filter(e => e.kind === 'atomcrate' && e.x > (m.objective.minCol || 0) * T);
         this.bombCrate = G.pick(crates); if (this.bombCrate) this.bombCrate.hasBomb = true;
       }
-      this.player.ammo.stinger = 0;
+      if (!this.player.flyer) this.player.ammo.stinger = 0;
       this.camX = 0;
       this.state = 'briefing';
       G.Audio.startMusic();
@@ -85,6 +88,7 @@
     respawn() {
       const p = this.player, cp = p.checkpoint;
       if (this.lives < 0) return;
+      if (p.flyer) { Object.assign(p, { dead: false, hp: C.player.hp, x: this.camX + 50, y: 50, vx: 0, vy: 0, invuln: 2.5, diving: false }); return; }
       Object.assign(p, { dead: false, hp: C.player.hp, x: cp.x, y: cp.y - 20, vx: 0, vy: 0, invuln: 2 });
       // если чекпоинт над водой/пропастью — откатываемся
       let tries = 0;
@@ -174,6 +178,13 @@
       const l = lines[phase - 1];
       if (l) { this.radio(l.radio); b.price = l.price; this.floatText(b.x + b.w / 2, b.y - 10, '$' + l.price + ',000,000!', '#ffd23f'); }
       this.shake = 6; G.Audio.play('alarm');
+    },
+    targetHit() {
+      const t = this.target; if (!t || t.hit) return;
+      t.hit = true; this.player.gone = true; this.player.diving = false; this.score += 5000;
+      for (let i = 0; i < 6; i++) this.explode(t.x + Math.random() * t.w, t.y + Math.random() * t.h, 34, 'none');
+      this.shake = 14; t.remove = true;
+      this.pending = { t: 1.6, fn: () => this.winMission() };
     },
     bossDefeated() { if (this.mission.objective.type === 'boss') this.winMission(); },
 
@@ -355,9 +366,12 @@
       if (!this.radioCur && this.radioQ.length) this.radioCur = this.radioQ.shift();
       if (this.radioCur) { this.radioCur.t -= dt; if (this.radioCur.t <= 0) this.radioCur = null; }
 
-      // Камера
-      const target = Math.max(0, Math.min(this.level.pxW - W, this.player.x - W * 0.4));
-      this.camX += (target - this.camX) * Math.min(1, dt * 8);
+      // Камера (в полёте — автоскролл)
+      if (o.type === 'flight') this.camX = Math.min(this.level.pxW - W, this.camX + (o.speed || 45) * dt);
+      else {
+        const target = Math.max(0, Math.min(this.level.pxW - W, this.player.x - W * 0.4));
+        this.camX += (target - this.camX) * Math.min(1, dt * 8);
+      }
       this.shake = Math.max(0, this.shake - dt * 20);
     },
 
@@ -482,8 +496,8 @@
       }
       G.text(ctx, '×' + Math.max(0, this.lives), 52, 3, { size: 8 });
       const w = C.weapons[p.weapon];
-      G.text(ctx, w.name + (p.weapon !== 'rifle' ? ' ' + p.ammo[p.weapon] : ''), 74, 3, { size: 8, color: '#ffd23f' });
-      G.text(ctx, 'GRN ' + p.grenades, 140, 3, { size: 8, color: '#9fe870' });
+      G.text(ctx, w.name + (isFinite(p.ammo[p.weapon]) ? ' ' + p.ammo[p.weapon] : ''), 74, 3, { size: 8, color: '#ffd23f' });
+      G.text(ctx, (p.flyer ? 'BOMBS ' : 'GRN ') + p.grenades, p.flyer ? 150 : 140, 3, { size: 8, color: '#9fe870' });
       if (p.rage > 0) G.text(ctx, 'FURY ' + Math.ceil(p.rage), 180, 3, { size: 8, color: '#ff4040' });
       let obj = '';
       if (o.type === 'reach') obj = 'REACH THE FLAG →';
@@ -493,6 +507,7 @@
         const captive = this.hostages.filter(h => h.state === 'captive').length;
         obj = captive ? 'HOSTAGES ' + freed + '/' + total : 'GET TO THE CHOPPER →';
       }
+      if (o.type === 'flight') obj = this.target && this.target.hit ? 'TARGET DESTROYED' : this.target && this.target.x - p.x < 230 ? 'PRESS V TO DIVE!' : 'FLY TO THE DRONE FACTORY →';
       if (o.type === 'search') {
         obj = this.hasBomb ? 'EXTRACT THE BOMB →' : 'FIND THE BOMB';
         if (!this.hasBomb) {

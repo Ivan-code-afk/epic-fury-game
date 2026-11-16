@@ -123,6 +123,81 @@
     },
   };
 
+  // ============ ИГРОК-ДРОН (миссия «Shahed in Reverse») ============
+  G.Flyer = function (x, y) {
+    Object.assign(this, {
+      kind: 'player', flyer: true, x, y, w: 22, h: 9, vx: 0, vy: 0, facing: 1, onGround: false,
+      hp: C.player.hp, invuln: 0, weapon: 'dronegun', ammo: { dronegun: Infinity }, grenades: 12, fireCd: 0, rage: 0,
+      crouch: false, aimUp: false, dead: false, deadT: 0, diving: false, t: 0, checkpoint: { x, y },
+    });
+  };
+  G.Flyer.prototype = {
+    update(dt, g) {
+      const I = G.Input, L = g.level;
+      this.t += dt;
+      if (this.dead) {
+        this.deadT -= dt; this.vy += C.GRAVITY * 0.5 * dt; this.y += this.vy * dt; this.x += 30 * dt;
+        if (Math.random() < 0.5) g.particles.push(new G.Particle(this.x + 10, this.y + 4, 0, -20, 0.6, '#444', 4, -0.05));
+        if (this.deadT <= 0) g.respawn();
+        return;
+      }
+      if (this.gone) return;
+      this.invuln = Math.max(0, this.invuln - dt); this.fireCd -= dt;
+      // финальное пике
+      if (this.diving && g.target) {
+        const tx = g.target.x + g.target.w / 2, ty = g.target.y + 30;
+        const a = Math.atan2(ty - cy(this), tx - cx(this));
+        this.x += Math.cos(a) * 280 * dt; this.y += Math.sin(a) * 280 * dt;
+        g.particles.push(new G.Particle(this.x, cy(this), -60, 0, 0.4, '#ffb030', 3, 0));
+        if (overlap(this, g.target)) g.targetHit();
+        return;
+      }
+      let mx = 0, my = 0;
+      if (I.down('left')) mx -= 1; if (I.down('right')) mx += 1;
+      if (I.down('up')) my -= 1; if (I.down('down')) my += 1;
+      const nx = Math.max(g.camX + 2, Math.min(g.camX + C.W - this.w - 2, this.x + mx * 135 * dt));
+      const ny = Math.max(18, Math.min(L.pxH - this.h - 2, this.y + my * 115 * dt));
+      const hits = (x, y) => L.solidAt(x + 1, y + 1) || L.solidAt(x + this.w - 1, y + 1) || L.solidAt(x + 1, y + this.h - 1) || L.solidAt(x + this.w - 1, y + this.h - 1);
+      if (!hits(nx, this.y)) this.x = nx;
+      if (!hits(this.x, ny)) this.y = ny;
+      // скролл прижал к скале
+      if (hits(this.x, this.y)) { this.hurt(g, 1); this.y -= 20; }
+      if (this.x < g.camX + 2) this.x = g.camX + 2;
+      this.tilt = my;
+      if (Math.random() < 0.5) g.particles.push(new G.Particle(this.x - 1, cy(this), -40, (Math.random() - 0.5) * 10, 0.25, '#ddd', 2, 0));
+
+      if (I.down('fire') && this.fireCd <= 0) {
+        const w = C.weapons.dronegun; this.fireCd = w.rate;
+        const b = new G.Bullet(this.x + this.w, this.y + 5 + (Math.floor(this.t * 20) % 2) * 2, w.speed, (Math.random() - 0.5) * w.spread * w.speed, 'player', w.dmg);
+        g.bullets.push(b); G.Audio.play('mg');
+      }
+      if (I.pressed('grenade') && this.grenades > 0) { this.grenades--; g.bullets.push(new G.AirBomb(cx(this), this.y + this.h, 70)); G.Audio.play('blip'); }
+      if (I.pressed('special')) {
+        if (g.target && g.target.x - this.x < 230 && g.target.x - this.x > -40) { this.diving = true; this.invuln = 99; G.Audio.play('rocket'); g.radio(G.pick(G.PRESIDENT_BARKS.dive)); }
+        else g.floatText(this.x + 10, this.y - 8, 'TOO FAR FROM TARGET', '#ff6060');
+      }
+    },
+    hurt(g, dmg) {
+      if (this.invuln > 0 || this.dead || g.state !== 'play') return;
+      this.hp -= dmg; this.invuln = 1.2; G.Audio.play('hurt'); g.shake = 4;
+      if (this.hp <= 0) this.die(g);
+    },
+    die(g) {
+      if (this.dead) return;
+      this.dead = true; this.deadT = 1.4; this.vy = -60; this.hp = 0; this.diving = false;
+      g.explode(cx(this), cy(this), 16, 'none'); G.Audio.play('fail'); g.onPlayerDeath();
+    },
+    draw(ctx, camX, g) {
+      if (this.gone) return;
+      if (this.invuln > 0 && this.invuln < 50 && Math.floor(this.invuln * 20) % 2) return;
+      const x = Math.round(this.x - camX - 2), y = Math.round(this.y - 2);
+      ctx.save(); ctx.translate(x + 13, y + 6);
+      ctx.rotate(this.diving && g.target ? Math.atan2(g.target.y + 30 - cy(this), g.target.x + g.target.w / 2 - cx(this)) : (this.tilt || 0) * 0.12);
+      ctx.drawImage(G.SPR.lucas, -13, -6);
+      ctx.restore();
+    },
+  };
+
   // ============ НАПАРНИК (ИИ) ============
   // type: 'president' | 'mossad'
   G.Ally = function (type, x, y, barks) {
@@ -902,6 +977,97 @@
       ctx.fillStyle = this.dead ? '#222' : (this.alarmT > 0 ? '#ff5050' : '#fff8c0'); ctx.fillRect(Math.round(this.x - camX) + 2, this.y + 6, 8, 4);
     },
   });
+
+  // Бомба, сброшенная с дрона
+  G.AirBomb = function (x, y, vx) { Object.assign(this, { x, y, vx, vy: 20, owner: 'player' }); };
+  G.AirBomb.prototype = {
+    update(dt, g) {
+      this.vy += C.GRAVITY * 0.7 * dt; this.x += this.vx * dt; this.y += this.vy * dt;
+      let hit = g.level.solidAt(this.x, this.y + 3) || this.y > g.level.pxH;
+      for (const e of g.entities) if (e.enemy && !e.dead && overlap({ x: this.x - 3, y: this.y - 3, w: 6, h: 6 }, e)) hit = true;
+      if (hit) { this.remove = true; g.explode(this.x, this.y, 30, 'player', 6); }
+    },
+    draw(ctx, camX) {
+      const x = Math.round(this.x - camX), y = Math.round(this.y);
+      ctx.fillStyle = '#333'; ctx.fillRect(x - 2, y - 4, 4, 7); ctx.fillStyle = '#666'; ctx.fillRect(x - 3, y - 5, 6, 2);
+    },
+  };
+
+  // Зенитка: очереди по дрону
+  G.AAGun = function (x, y) { Enemy.call(this, { kind: 'aagun', x: x - 5, y: y - 4, w: 26, h: 20, hp: 4, score: 250, fireCd: 1 + Math.random(), burst: 0 }); };
+  G.AAGun.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.AAGun.prototype, {
+    update(dt, g) {
+      this.flash -= dt;
+      if (this.dead) { g.explode(cx(this), cy(this), 22, 'none'); this.remove = true; return; }
+      const p = g.player;
+      if (p.dead || this.x > g.camX + C.W + 10 || this.x < g.camX - 30) return;
+      this.fireCd -= dt;
+      if (this.fireCd <= 0) {
+        if (this.burst <= 0) this.burst = 3;
+        this.burst--; this.fireCd = this.burst > 0 ? 0.12 : 1.5;
+        const ang = Math.atan2(cy(p) - this.y, cx(p) + 40 - cx(this)) + (Math.random() - 0.5) * 0.15;
+        g.bullets.push(new G.Bullet(cx(this), this.y + 4, Math.cos(ang) * 175, Math.sin(ang) * 175, 'enemy', 1));
+        G.Audio.play('shoot');
+      }
+    },
+    draw(ctx, camX) {
+      let img = G.SPR.aagun; if (this.flash > 0) img = G.tintCache(img, '#fff');
+      ctx.drawImage(img, Math.round(this.x - camX), Math.round(this.y));
+    },
+  });
+
+  // ЗРК: пускает самонаводящиеся ракеты (их можно сбить)
+  G.SamSite = function (x, y) { Enemy.call(this, { kind: 'sam', x: x - 7, y: y - 6, w: 30, h: 22, hp: 6, score: 400, fireCd: 1.5 }); };
+  G.SamSite.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.SamSite.prototype, {
+    update(dt, g) {
+      this.flash -= dt;
+      if (this.dead) { g.explode(cx(this), cy(this), 30, 'none'); this.remove = true; return; }
+      if (g.player.dead || this.x > g.camX + C.W - 10 || this.x < g.camX) return;
+      this.fireCd -= dt;
+      if (this.fireCd <= 0) { this.fireCd = 4; g.entities.push(new G.SamMissile(this.x + 20, this.y)); G.Audio.play('rocket'); }
+    },
+    draw(ctx, camX) {
+      let img = G.SPR.sam; if (this.flash > 0) img = G.tintCache(img, '#fff');
+      ctx.drawImage(img, Math.round(this.x - camX), Math.round(this.y));
+    },
+  });
+  G.SamMissile = function (x, y) { Enemy.call(this, { kind: 'samMissile', flying: true, x, y, w: 8, h: 4, hp: 1, score: 100, ang: -Math.PI / 2, speed: 90, life: 5 }); };
+  G.SamMissile.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.SamMissile.prototype, {
+    update(dt, g) {
+      this.life -= dt;
+      if (this.dead || this.life <= 0) { this.remove = true; g.explode(cx(this), cy(this), 14, 'none'); return; }
+      const p = g.player;
+      const want = Math.atan2(cy(p) - cy(this), cx(p) - cx(this));
+      let da = want - this.ang; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+      this.ang += Math.max(-2.2 * dt, Math.min(2.2 * dt, da));
+      this.speed = Math.min(170, this.speed + 60 * dt);
+      this.x += Math.cos(this.ang) * this.speed * dt; this.y += Math.sin(this.ang) * this.speed * dt;
+      if (Math.random() < 0.7) g.particles.push(new G.Particle(cx(this), cy(this), 0, 0, 0.5, '#bbb', 3, -0.05));
+      if (!p.dead && overlap(this, p)) { this.remove = true; this.dead = true; g.explode(cx(this), cy(this), 18, 'enemy', 2); }
+    },
+    draw(ctx, camX) {
+      ctx.save(); ctx.translate(Math.round(cx(this) - camX), Math.round(cy(this))); ctx.rotate(this.ang);
+      ctx.fillStyle = '#ddd'; ctx.fillRect(-6, -1, 10, 3); ctx.fillStyle = '#c22'; ctx.fillRect(4, -1, 2, 3); ctx.fillStyle = '#ffb030'; ctx.fillRect(-8, 0, 2, 1);
+      ctx.restore();
+    },
+  });
+
+  // Завод дронов: цель финального пике
+  G.Factory = function (x, y) { Object.assign(this, { kind: 'factory', x: x - 34, y: y + 16 - 60, w: 84, h: 60, hit: false, t: 0 }); };
+  G.Factory.prototype = {
+    update(dt) { this.t += dt; },
+    draw(ctx, camX, g) {
+      const x = Math.round(this.x - camX);
+      ctx.drawImage(G.SPR.factory, x, this.y);
+      if (!this.hit && g.player.x > this.x - 260 && Math.floor(this.t * 3) % 2) {
+        ctx.strokeStyle = '#ff3030'; ctx.strokeRect(x - 3, this.y - 3, this.w + 6, this.h + 6);
+        G.text(ctx, 'TARGET — PRESS V', x + this.w / 2, this.y - 14, { size: 7, align: 'center', color: '#ff5050' });
+      }
+    },
+  };
 
   // Ракета РПГ (вражеская)
   G.EnemyRocket = function (x, y, dir) {

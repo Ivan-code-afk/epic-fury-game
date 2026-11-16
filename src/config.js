@@ -25,6 +25,7 @@ G.CONFIG = {
   weapons: {
     rifle:   { name: 'M4',      rate: 0.16, dmg: 1, speed: 330, spread: 0,    ammo: Infinity },
     mg:      { name: 'M249',    rate: 0.07, dmg: 1, speed: 340, spread: 0.08, ammo: 200 },
+    dronegun: { name: 'GUN', rate: 0.12, dmg: 1, speed: 360, spread: 0.03, ammo: Infinity },
     stinger: { name: 'STINGER', rate: 0.55, dmg: 5, speed: 170, spread: 0,    ammo: 12, homing: true },
   },
 
