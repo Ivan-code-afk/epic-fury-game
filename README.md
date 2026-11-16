@@ -1,67 +1,67 @@
-# Операция «Эпическая ярость»
+# Operation Epic Fury
 
-Сатирический платформер в стиле 90-х (Contra / Metal Slug). Чистый HTML5 + JavaScript, без зависимостей и сборки.
-Все персонажи вымышлены.
+A satirical 90s-style run-and-gun platformer (think Contra / Metal Slug). Plain HTML5 + JavaScript: no dependencies, no build step.
+All characters are fictional.
 
-## Запуск
-Открыть `index.html` в браузере. Работает и с GitHub Pages (Settings → Pages → ветка `main`).
+## Running
+Open `index.html` in a browser. It also works on GitHub Pages (Settings → Pages → `main` branch).
 
-## Управление
-| Действие | Клавиатура | Телефон |
+## Controls
+| Action | Keyboard | Touch |
 |---|---|---|
-| Бег | ← → / A D | ◀ ▶ |
-| Прицел вверх / присесть | ↑ ↓ / W S | ▲ ▼ |
-| Прыжок | X / K / Пробел | A |
-| Огонь | Z / J | B |
-| Граната | C / L | G |
-| Тепловизор | V / I | V |
-| Пауза | Enter / Esc | II |
-| Звук | M | — |
+| Run | ← → / A D | ◀ ▶ |
+| Aim up / crouch | ↑ ↓ / W S | ▲ ▼ |
+| Jump | X / K / Space | A |
+| Fire | Z / J | B |
+| Grenade | C / L | G |
+| Thermal vision | V / I | V |
+| Pause | Enter / Esc | II |
+| Sound | M | — |
 
-Вниз + прыжок — спрыгнуть с платформы.
+Down + jump drops through a platform.
 
-## Структура
+## Project layout
 ```
-index.html        — канвас и сенсорные кнопки
-src/config.js     — имена персонажей, оружие, физика
-src/input.js      — клавиатура и тач
-src/audio.js      — синтезированные звуки и чиптюн
-src/sprites.js    — процедурный пиксель-арт (заменяем на PNG)
-src/level.js      — тайлы, компактный формат карт, фоны
-src/entities.js   — игрок, напарник-ИИ, враги, снаряды, бонусы
-src/dialog.js     — радио-диалоги с портретами, пузыри реплик
-src/missions.js   — кампания: карты, цели, диалоги
-src/game.js       — главный цикл, состояния, HUD
+index.html        — canvas and touch buttons
+src/config.js     — character names, weapons, physics
+src/input.js      — keyboard and touch
+src/audio.js      — synthesized sound effects and chiptune
+src/sprites.js    — procedural pixel art (swap in PNGs)
+src/level.js      — tiles, compact map format, backgrounds
+src/entities.js   — player, AI partner, enemies, projectiles, pickups
+src/dialog.js     — radio dialogue with portraits, speech bubbles
+src/missions.js   — campaign: maps, objectives, dialogue
+src/game.js       — main loop, game states, HUD
 ```
 
-## Как сделать новую миссию
-Добавьте объект в `G.MISSIONS` (`src/missions.js`):
+## Adding a mission
+Add an object to `G.MISSIONS` in `src/missions.js`:
 
 ```js
 {
-  id: 'my', title: 'НАЗВАНИЕ', subtitle: 'Описание', theme: 'desert', // desert | gulf | city | night
+  id: 'my', title: 'TITLE', subtitle: 'Description', theme: 'desert', // desert | gulf | city | night
   playable: true,
-  ally: null,                       // 'president' | 'mossad' | null
-  objective: { type: 'reach' },     // reach | defend (waves) | launchers (time)
+  ally: null,                        // 'president' | 'mossad' | null
+  objective: { type: 'reach' },      // reach | defend (waves) | launchers (time)
   level: {
-    ground: '#',                    // # песок, r камень, c бетон
-    terrain: '3333344445555___3333', // высота земли по колонкам; _ вода; пробел — пропасть
-    platforms: [[колонка, ряд, длина]],
-    blocks: [[колонка, ряд, 'b' | 'x']],
-    objects: 'P2 S10 T14 H8:5 E19', // буква+колонка[:ряд]
+    ground: '#',                     // # sand, r rock, c concrete
+    terrain: '3333344445555___3333', // ground height per column; _ water; space = pit
+    platforms: [[column, row, length]],
+    blocks: [[column, row, 'b' | 'x']],
+    objects: 'P2 S10 T14 H8:5 E19',  // letter + column[:row]
   },
-  intro: [['hq', 'Текст'], ['president', 'Текст', 'happy']],
-  triggers: [{ col: 10, radio: ['president', 'Реплика по рации'] }],
-  outro: [['president', 'Победа!', 'happy']],
+  intro: [['hq', 'Text'], ['president', 'Text', 'happy']],
+  triggers: [{ col: 10, radio: ['president', 'Radio line'] }],
+  outro: [['president', 'Victory!', 'happy']],
 }
 ```
 
-Объекты: `P` игрок, `A` напарник, `S` солдат, `T` пулемётчик, `L` пусковая-грузовик, `K` мирный грузовик,
-`X` база, `E` флаг выхода, `H` аптечка, `M` M249, `N` Stinger, `G` гранаты, `Y` «Галстук ярости».
+Objects: `P` player, `A` partner, `S` soldier, `T` machine-gunner, `L` launcher truck, `K` civilian truck,
+`X` base, `E` exit flag, `H` medkit, `M` M249, `N` Stinger, `G` grenades, `Y` Tie of Fury.
 
-## Своя графика
-Все спрайты лежат в `G.SPR` (`src/sprites.js`). Чтобы заменить, загрузите `Image` и положите под тем же ключом,
-например `G.SPR.president[0] = myImage`. Размеры кадров указаны в коде.
+## Custom art
+All sprites live in `G.SPR` (`src/sprites.js`). To replace one, load an `Image` and assign it to the same key,
+e.g. `G.SPR.president[0] = myImage`. Frame sizes are noted in the code.
 
-## Статус
-Играбельны миссии 1, 2, 3, 4, 6. Остальные — в меню с пометкой «СКОРО».
+## Status
+Missions 1, 2, 3, 4 and 6 are playable. The rest show as "COMING SOON" in the menu.

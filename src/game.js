@@ -67,7 +67,7 @@
     },
     onPlayerDeath() {
       this.lives--;
-      if (this.lives < 0) this.pending = { t: 0.9, fn: () => this.failMission('Сержант Стил пал в бою.') };
+      if (this.lives < 0) this.pending = { t: 0.9, fn: () => this.failMission('Sgt. Steel has fallen.') };
       else this.radio(G.pick(G.PRESIDENT_BARKS.death));
     },
     failMission(reason) {
@@ -209,7 +209,7 @@
       if (o.type === 'launchers' && this.state === 'play' && this.launchersLeft > 0) {
         this.timer -= dt;
         if (this.timer <= 10 && Math.floor(this.timer) !== Math.floor(this.timer + dt)) G.Audio.play('alarm');
-        if (this.timer <= 0) this.failMission('Ракета запущена! Не успели.');
+        if (this.timer <= 0) this.failMission('Missile launched! Too late.');
       }
       // Рация
       if (!this.radioCur && this.radioQ.length) this.radioCur = this.radioQ.shift();
@@ -254,15 +254,15 @@
       if (this.state === 'briefing' || this.state === 'outro') {
         if (this.state === 'briefing') {
           ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, 0, W, H);
-          G.text(ctx, 'МИССИЯ ' + (this.missionIdx + 1), W / 2, 34, { size: 9, align: 'center', color: '#ffd23f' });
+          G.text(ctx, 'MISSION ' + (this.missionIdx + 1), W / 2, 34, { size: 9, align: 'center', color: '#ffd23f' });
           G.text(ctx, this.mission.title, W / 2, 48, { size: 15, align: 'center' });
           G.text(ctx, this.mission.subtitle, W / 2, 70, { size: 8, align: 'center', color: '#ccc' });
         }
         G.Dialog.draw(ctx);
       }
-      if (this.state === 'pause') this.overlay('ПАУЗА', ['ENTER — продолжить', 'C — выйти в меню', 'M — звук вкл/выкл']);
-      if (this.state === 'win') this.overlay('МИССИЯ ВЫПОЛНЕНА', ['Очки: ' + this.score, 'Рекорд: ' + (save[this.mission.id] || 0), '', 'ENTER — дальше'], '#9fe870');
-      if (this.state === 'fail') this.overlay('МИССИЯ ПРОВАЛЕНА', [this.failReason || '', '', 'ENTER — заново', 'C — к выбору миссий'], '#ff5050');
+      if (this.state === 'pause') this.overlay('PAUSED', ['ENTER — resume', 'C — quit to menu', 'M — sound on/off']);
+      if (this.state === 'win') this.overlay('MISSION ACCOMPLISHED', ['Score: ' + this.score, 'Best: ' + (save[this.mission.id] || 0), '', 'ENTER — continue'], '#9fe870');
+      if (this.state === 'fail') this.overlay('MISSION FAILED', [this.failReason || '', '', 'ENTER — retry', 'C — mission select'], '#ff5050');
     },
 
     drawWorld() {
@@ -284,7 +284,7 @@
       if (this.ally) this.ally.drawBubble(ctx, camX);
       ctx.restore();
       if (this.thermal) {
-        G.text(ctx, '◉ ТЕПЛОВИЗОР', W - 6, H - 14, { size: 7, align: 'right', color: '#ff8a20' });
+        G.text(ctx, '◉ THERMAL', W - 6, H - 14, { size: 7, align: 'right', color: '#ff8a20' });
         ctx.fillStyle = 'rgba(255,255,255,.04)';
         for (let y = (this.time * 40) % 4; y < H; y += 4) ctx.fillRect(0, y, W, 1);
       }
@@ -299,23 +299,23 @@
       G.text(ctx, '×' + Math.max(0, this.lives), 52, 3, { size: 8 });
       const w = C.weapons[p.weapon];
       G.text(ctx, w.name + (p.weapon !== 'rifle' ? ' ' + p.ammo[p.weapon] : ''), 74, 3, { size: 8, color: '#ffd23f' });
-      G.text(ctx, 'ГРН ' + p.grenades, 140, 3, { size: 8, color: '#9fe870' });
-      if (p.rage > 0) G.text(ctx, 'ЯРОСТЬ ' + Math.ceil(p.rage), 180, 3, { size: 8, color: '#ff4040' });
+      G.text(ctx, 'GRN ' + p.grenades, 140, 3, { size: 8, color: '#9fe870' });
+      if (p.rage > 0) G.text(ctx, 'FURY ' + Math.ceil(p.rage), 180, 3, { size: 8, color: '#ff4040' });
       let obj = '';
-      if (o.type === 'reach') obj = 'ДОЙДИ ДО ФЛАГА →';
+      if (o.type === 'reach') obj = 'REACH THE FLAG →';
       if (o.type === 'defend') {
-        obj = 'ВОЛНА ' + Math.max(1, this.waveIdx + 1) + '/' + o.waves.length;
+        obj = 'WAVE ' + Math.max(1, this.waveIdx + 1) + '/' + o.waves.length;
         if (this.base) {
           ctx.fillStyle = '#333'; ctx.fillRect(W - 70, 16, 64, 4);
           ctx.fillStyle = '#4ad04a'; ctx.fillRect(W - 70, 16, 64 * Math.max(0, this.base.hp / this.base.maxHp), 4);
-          G.text(ctx, 'БАЗА', W - 74, 14, { size: 7, align: 'right' });
+          G.text(ctx, 'BASE', W - 74, 14, { size: 7, align: 'right' });
         }
       }
       if (o.type === 'launchers') {
         const t = Math.max(0, Math.ceil(this.timer));
         const mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
-        obj = 'ПУСКОВЫЕ ' + this.launchersLeft + '  ⏱ ' + mm + ':' + ss;
-        if (!this.thermal && this.time % 6 < 3 && this.state === 'play') G.text(ctx, 'V — тепловизор', W - 6, 16, { size: 7, align: 'right', color: '#ff8a20' });
+        obj = 'LAUNCHERS ' + this.launchersLeft + '  ⏱ ' + mm + ':' + ss;
+        if (!this.thermal && this.time % 6 < 3 && this.state === 'play') G.text(ctx, 'V — thermal vision', W - 6, 16, { size: 7, align: 'right', color: '#ff8a20' });
       }
       const urgent = o.type === 'launchers' && this.timer < 30 && Math.floor(this.time * 4) % 2;
       G.text(ctx, obj, W - 6, 3, { size: 8, align: 'right', color: urgent ? '#ff4040' : '#fff' });
@@ -358,19 +358,19 @@
       ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(0, 26, W, 62);
       G.text(ctx, C.title, W / 2, 30, { size: 30, align: 'center', color: '#ffd23f', shadowColor: '#8a2010' });
       G.text(ctx, C.subtitle, W / 2, 68, { size: 9, align: 'center' });
-      if (Math.floor(this.time * 2) % 2) G.text(ctx, G.Input.isTouch ? 'КОСНИСЬ ЭКРАНА' : 'НАЖМИ ENTER', W / 2, 110, { size: 10, align: 'center' });
-      G.text(ctx, 'Сатира. Все персонажи вымышлены.', W / 2, H - 12, { size: 7, align: 'center', color: '#ddd' });
+      if (Math.floor(this.time * 2) % 2) G.text(ctx, G.Input.isTouch ? 'TAP TO START' : 'PRESS ENTER', W / 2, 110, { size: 10, align: 'center' });
+      G.text(ctx, 'Satire. All characters are fictional.', W / 2, H - 12, { size: 7, align: 'center', color: '#ddd' });
     },
 
     drawSelect() {
       ctx.fillStyle = '#0b1020'; ctx.fillRect(0, 0, W, H);
-      G.text(ctx, 'ВЫБОР МИССИИ', W / 2, 10, { size: 12, align: 'center', color: '#ffd23f' });
+      G.text(ctx, 'SELECT MISSION', W / 2, 10, { size: 12, align: 'center', color: '#ffd23f' });
       G.MISSIONS.forEach((m, i) => {
         const y = 34 + i * 13, on = i === this.sel;
         if (on) { ctx.fillStyle = 'rgba(255,210,63,.18)'; ctx.fillRect(10, y - 2, W - 20, 12); }
         const col = m.playable ? (on ? '#ffd23f' : '#fff') : '#666';
         G.text(ctx, String(i + 1).padStart(2, ' ') + '. ' + m.title, 16, y, { size: 8, color: col });
-        const tag = !m.playable ? 'СКОРО' : m.ally === 'president' ? '★ С ПРЕЗИДЕНТОМ' : m.ally === 'mossad' ? '★ С МОССАДОМ' : (save[m.id] ? 'РЕКОРД ' + save[m.id] : '');
+        const tag = !m.playable ? 'COMING SOON' : m.ally === 'president' ? '★ WITH THE PRESIDENT' : m.ally === 'mossad' ? '★ WITH MOSSAD' : (save[m.id] ? 'BEST ' + save[m.id] : '');
         G.text(ctx, tag, W - 16, y, { size: 7, align: 'right', color: m.playable ? '#9fe870' : '#555' });
       });
       const m = G.MISSIONS[this.sel];

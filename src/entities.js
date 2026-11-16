@@ -149,7 +149,7 @@
       // Отстал или упал — «телепорт» к игроку
       if (Math.abs(p.x - this.x) > 260 || this.y > L.pxH || L.inWater(this)) {
         this.x = p.x - 20 * p.facing; this.y = p.y - 40; this.vy = 0;
-        if (this.type === 'mossad') this.say('Я уже здесь.');
+        if (this.type === 'mossad') this.say('Already here.');
       }
       // Стрельба по ближайшему врагу
       let best = null, bd = 210;
@@ -173,7 +173,7 @@
       // Агент Ави подсвечивает спрятанные пусковые рядом
       if (this.type === 'mossad') {
         for (const e of g.entities) if (e.isLauncher && !e.marked && Math.abs(cx(e) - cx(this)) < 90) {
-          e.marked = true; this.say(G.pick(['Цель отмечена.', 'Этот грузовик — пусковая.', 'Был тут вчера. Это она.']));
+          e.marked = true; this.say(G.pick(['Target marked.', 'That truck is a launcher.', 'Was here yesterday. It\'s this one.']));
         }
       }
     },
@@ -182,11 +182,11 @@
       this.hits++;
       if (this.type === 'president' && this.hits % 6 === 0 && !this.rambo) {
         this.rambo = 12;
-        this.say('ГАЛСТУК НА ГОЛОВУ! РЕЖИМ РЭМБО!');
+        this.say('TIE ON THE HEAD! RAMBO MODE!');
         G.Audio.play('alarm');
-        g.floatText(cx(this), this.y - 20, 'РЕЖИМ РЭМБО', '#ff4040');
+        g.floatText(cx(this), this.y - 20, 'RAMBO MODE', '#ff4040');
       } else if (Math.random() < 0.25) {
-        this.say(this.type === 'president' ? G.pick(['Ой! Нечестно!', 'Это фейковая пуля!', 'Я подам в суд!']) : G.pick(['Царапина.', 'Беседер.']));
+        this.say(this.type === 'president' ? G.pick(['Ow! Not fair!', 'That was a fake bullet!', 'I\'m going to sue!']) : G.pick(['Just a scratch.', 'Beseder.']));
       }
     },
     say(text) { this.bubble = { text, t: 3 }; },
@@ -362,7 +362,7 @@
     update(dt) { this.flash -= dt; },
     damage(g, d) {
       this.hp -= d; this.flash = 0.15; g.shake = 5;
-      if (this.hp <= 0 && !this.dead) { this.dead = true; g.explode(cx(this), cy(this), 50, 'none'); g.failMission('База уничтожена!'); }
+      if (this.hp <= 0 && !this.dead) { this.dead = true; g.explode(cx(this), cy(this), 50, 'none'); g.failMission('The base was destroyed!'); }
     },
     draw(ctx, camX) {
       const x = Math.round(this.x - camX), y = this.y;
@@ -460,11 +460,11 @@
       if (p.dead || !overlap(this, p)) return;
       this.remove = true; G.Audio.play('pickup');
       const msg = {
-        H: () => { p.hp = Math.min(C.player.hp, p.hp + 2); return 'АПТЕЧКА'; },
+        H: () => { p.hp = Math.min(C.player.hp, p.hp + 2); return 'MEDKIT'; },
         M: () => { p.weapon = 'mg'; p.ammo.mg += C.weapons.mg.ammo; return 'M249!'; },
         N: () => { p.weapon = 'stinger'; p.ammo.stinger += C.weapons.stinger.ammo; return 'STINGER!'; },
-        G: () => { p.grenades += 3; return '+3 ГРАНАТЫ'; },
-        Y: () => { p.rage = C.tieRage.duration; g.presidentBark('rage'); return 'ГАЛСТУК ЯРОСТИ!'; },
+        G: () => { p.grenades += 3; return '+3 GRENADES'; },
+        Y: () => { p.rage = C.tieRage.duration; g.presidentBark('rage'); return 'TIE OF FURY!'; },
       }[this.type]();
       g.floatText(cx(this), this.y - 6, msg, '#ffd23f');
     },

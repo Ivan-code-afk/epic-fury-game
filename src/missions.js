@@ -1,18 +1,18 @@
-// Кампания. Каждая миссия — данные: карта, цель, диалоги, триггеры.
+// Campaign. Each mission is data: map, objective, dialogue, triggers.
 //
 // objective.type:
-//   'reach'     — дойти до флага E
-//   'defend'    — продержаться все волны дронов, база X должна уцелеть
-//   'launchers' — уничтожить все пусковые L до конца таймера (V — тепловизор)
+//   'reach'     — get to flag E
+//   'defend'    — survive all drone waves; base X must survive
+//   'launchers' — destroy every launcher L before time runs out (V = thermal)
 //
-// Диалог: [кто, текст, настроение]   кто: president | hero | mossad | hq   настроение: normal | happy | rambo
-// triggers: { col: колонка карты, radio: [кто, текст, настроение] }  — короткая реплика по рации без паузы
+// Dialogue: [who, text, mood]   who: president | hero | mossad | hq   mood: normal | happy | rambo
+// triggers: { col: map column, radio: [who, text, mood] } — short radio line, no pause
 const R = (ch, n) => ch.repeat(n);
 
 G.MISSIONS = [
   // ------------------------------------------------------------------ 1
   {
-    id: 'landing', title: 'ВЫСАДКА В ХОРМУЗЕ', subtitle: 'Обучение. Захвати плацдарм.', theme: 'gulf', playable: true,
+    id: 'landing', title: 'HORMUZ LANDING', subtitle: 'Training. Take the beachhead.', theme: 'gulf', playable: true,
     objective: { type: 'reach' },
     level: {
       ground: '#',
@@ -22,27 +22,27 @@ G.MISSIONS = [
       objects: 'P2 S14 S31 H28:5 S45 T50 S57 M68:6 S70 G73:4 S78 S86 T96 Y94:5 S106 S113 H105:6 S118 T123 E127',
     },
     intro: [
-      ['hq', 'Сержант Стил, вы на берегу Ормузского пролива. Задача: захватить плацдарм и дойти до точки эвакуации.'],
-      ['president', 'Сержант! Это президент Голд. Я смотрю на тебя по телевизору. Отличный рейтинг. Огромный.', 'happy'],
-      ['president', 'Твоя задача простая: побеждать. Я всегда побеждаю. Это у нас общее.'],
-      ['hero', 'Есть, сэр. Как управлять?'],
-      ['hq', 'Стрелки — бег. X — прыжок, Z — огонь, C — граната. Вверх — стрельба вверх. Вниз + прыжок — спрыгнуть с платформы.'],
+      ['hq', 'Sgt. Steel, you are on the shore of the Strait of Hormuz. Take the beachhead and reach the extraction point.'],
+      ['president', 'Sergeant! President Gold here. I\'m watching you on TV. Great ratings. Huge.', 'happy'],
+      ['president', 'Your job is simple: win. I always win. We have that in common.'],
+      ['hero', 'Yes, sir. What are the controls?'],
+      ['hq', 'Arrows to run. X jumps, Z fires, C throws a grenade. Hold UP to aim up. DOWN + jump drops through a platform.'],
     ],
     triggers: [
-      { col: 19, radio: ['hq', 'Вода впереди. Солдаты не умеют плавать. Ты тоже.'] },
-      { col: 40, radio: ['president', 'Видишь ящики? Внутри может быть что угодно. Даже моя книга!', 'happy'] },
-      { col: 65, radio: ['hq', 'Пулемёт M249 на платформе. Бери.'] },
-      { col: 92, radio: ['president', 'Красный галстук! Мой! Надень его — станешь непобедимым. Как я.', 'happy'] },
+      { col: 19, radio: ['hq', 'Water ahead. Soldiers can\'t swim. Neither can you.'] },
+      { col: 40, radio: ['president', 'See those crates? Could be anything inside. Even my book!', 'happy'] },
+      { col: 65, radio: ['hq', 'M249 machine gun on the platform. Grab it.'] },
+      { col: 92, radio: ['president', 'A red tie! Mine! Put it on and you\'re unstoppable. Like me.', 'happy'] },
     ],
     outro: [
-      ['hq', 'Плацдарм наш. Отличная работа, сержант.'],
-      ['president', 'Великолепно. Лучшая высадка в истории высадок. Я буду рассказывать её как свою.', 'happy'],
+      ['hq', 'Beachhead secured. Outstanding work, Sergeant.'],
+      ['president', 'Magnificent. Best landing in the history of landings. I\'ll be telling it as my own.', 'happy'],
     ],
   },
 
   // ------------------------------------------------------------------ 2
   {
-    id: 'swarm', title: 'РОЙ ШАХЕДОВ', subtitle: 'Оборона базы в заливе.', theme: 'gulf', playable: true,
+    id: 'swarm', title: 'SHAHED SWARM', subtitle: 'Defend the Gulf base.', theme: 'gulf', playable: true,
     objective: {
       type: 'defend', baseHp: 24,
       waves: [
@@ -61,28 +61,28 @@ G.MISSIONS = [
       objects: 'X2 P12 N14 G22 H33:5',
     },
     intro: [
-      ['hq', 'Радары видят рой дронов с востока. Цель — наша база. Держите оборону.'],
-      ['president', 'Дроны? Сделанные за двадцать тысяч долларов? Это дёшево. Я не люблю дешёвое.'],
-      ['hero', 'Чем их сбивать, сэр?'],
-      ['hq', 'Stinger наводится сам. Пулемёт — по старинке. Стреляйте вверх, когда они пикируют.'],
-      ['president', 'И помни: каждый сбитый дрон — это победа. Моя победа. Ну и твоя немножко.', 'happy'],
+      ['hq', 'Radar shows a drone swarm inbound from the east. Target: our base. Hold the line.'],
+      ['president', 'Drones? Twenty thousand dollars each? That\'s cheap. I don\'t like cheap.'],
+      ['hero', 'How do I take them down, sir?'],
+      ['hq', 'The Stinger locks on by itself. The machine gun works the old way. Aim up when they dive.'],
+      ['president', 'And remember: every drone you drop is a win. My win. Okay, a little bit yours.', 'happy'],
     ],
     waveRadio: [
-      ['hq', 'Волна первая. Звучат как мопеды.'],
-      ['president', 'Они летят прямо на базу! Как невежливо.'],
-      ['hq', 'С ними пехота. Не дайте подойти к базе.'],
-      ['president', 'Больше дронов?! Ладно. ГАЛСТУК НА ГОЛОВУ!', 'rambo'],
-      ['hq', 'Последняя волна. Самая большая.'],
+      ['hq', 'Wave one. They sound like mopeds.'],
+      ['president', 'They\'re flying straight at the base! How rude.'],
+      ['hq', 'Infantry with them. Keep them off the base.'],
+      ['president', 'MORE drones?! Fine. TIE ON THE HEAD!', 'rambo'],
+      ['hq', 'Final wave. The biggest one.'],
     ],
     outro: [
-      ['hq', 'Небо чистое. Все дроны сбиты.'],
-      ['president', 'Невероятно. Я сразу сказал, что мы победим. Я говорю это всегда — и всегда прав.', 'happy'],
+      ['hq', 'Skies are clear. All drones down.'],
+      ['president', 'Incredible. I said we\'d win. I always say that, and I\'m always right.', 'happy'],
     ],
   },
 
   // ------------------------------------------------------------------ 3
   {
-    id: 'trucks', title: 'ГРУЗОВИКИ С СЮРПРИЗОМ', subtitle: 'Найди пусковые среди фургонов.', theme: 'city', playable: true,
+    id: 'trucks', title: 'SURPRISE TRUCKS', subtitle: 'Find the launchers among the vans.', theme: 'city', playable: true,
     objective: { type: 'launchers', time: 180 },
     level: {
       ground: '#',
@@ -92,36 +92,36 @@ G.MISSIONS = [
       objects: 'P2 K10 S16 L20 S28 K33 T38 H37:4 K46 S50 L55 S62 K66 G60:5 S74 K78 L84 S90 T96 K103 Y90:5 S108 K112 S118 L122 M118:4 S130 K136 S142 H135:5',
     },
     intro: [
-      ['hq', 'Разведка: пусковые установки замаскированы под обычные грузовики. До запуска — три минуты.'],
-      ['hq', 'Включи тепловизор — клавиша V. Горячий двигатель ракеты светится. Не трогай мирные фургоны.'],
-      ['president', 'Как отличить грузовик с ракетой от грузовика с арбузами? Очень просто. Я бы отличил.'],
-      ['hero', 'А как, сэр?'],
-      ['president', 'Интуиция. Огромная интуиция. Включай тепловизор.', 'happy'],
+      ['hq', 'Intel says the launchers are disguised as ordinary trucks. Three minutes to launch.'],
+      ['hq', 'Switch on thermal vision with V. A hot missile motor glows. Leave the civilian vans alone.'],
+      ['president', 'How do you tell a missile truck from a watermelon truck? Very easy. I could tell.'],
+      ['hero', 'How, sir?'],
+      ['president', 'Instinct. Incredible instinct. Turn on the thermal.', 'happy'],
     ],
     triggers: [
-      { col: 40, radio: ['hq', 'Подсказка: мирных грузовиков больше, чем пусковых.'] },
-      { col: 90, radio: ['president', 'Этот рынок — плохая сделка. Я бы построил тут гольф-клуб.'] },
+      { col: 40, radio: ['hq', 'Hint: there are more civilian trucks than launchers.'] },
+      { col: 90, radio: ['president', 'This market is a bad deal. I\'d put a golf club here.'] },
     ],
     outro: [
-      ['hq', 'Все пусковые уничтожены. Запуска не будет.'],
-      ['president', 'Ни одна ракета не взлетела. Ни одна! Это рекорд. Мой рекорд.', 'happy'],
+      ['hq', 'All launchers destroyed. There will be no launch.'],
+      ['president', 'Not a single missile got off the ground. Not one! That\'s a record. My record.', 'happy'],
     ],
   },
 
   // ------------------------------------------------------------------ 4
   {
-    id: 'escort', title: 'ПРЕЗИДЕНТСКИЙ ЭСКОРТ', subtitle: 'Президент Голд лично идёт в бой.', theme: 'desert', playable: true,
+    id: 'escort', title: 'PRESIDENTIAL ESCORT', subtitle: 'President Gold goes into battle himself.', theme: 'desert', playable: true,
     ally: 'president',
     objective: { type: 'reach' },
     allyBarks: [
-      'Я лично изобрёл прыжки. Смотри.',
-      'Эти солдаты — фейковые. Стреляй по ним.',
-      'Мне говорили, что я лучший стрелок. Все говорили.',
-      'Кто-нибудь, принесите бургер. Сюда, в пустыню.',
-      'Я бы купил этот пролив. Хорошая недвижимость.',
-      'Песок. Сплошной песок. Ужасная сделка.',
-      'Мой золотой пистолет стреляет только победами.',
-      'Сержант, ты в кадре? Я хорошо выгляжу?',
+      'I personally invented jumping. Watch.',
+      'Those soldiers are fake. Shoot them.',
+      'People tell me I\'m the best shot. Everybody says it.',
+      'Somebody bring me a burger. Out here. In the desert.',
+      'I\'d buy this strait. Great real estate.',
+      'Sand. Nothing but sand. Terrible deal.',
+      'My golden pistol only fires victories.',
+      'Sergeant, am I in the shot? Do I look good?',
     ],
     level: {
       ground: '#',
@@ -131,39 +131,39 @@ G.MISSIONS = [
       objects: 'P3 A1 S18 S24 H17:5 S30 T38 S44 G47:3 S50 S55 S68 T76 S80 M79:4 S86 S90 S95 Y98:4 T104 S110 S116 H121:5 S124 S130 T134 S138 E146',
     },
     intro: [
-      ['hq', 'Внимание. Президент Голд прибыл на фронт. Лично.'],
-      ['president', 'Сержант! Я решил, что эту миссию надо сделать красиво. Поэтому я здесь.', 'happy'],
-      ['hero', 'Сэр, это опасно.'],
-      ['president', 'Опасно — это моё второе имя. Первое — Голд. У меня золотой пистолет. Пошли.'],
-      ['hq', 'Президент бессмертен по протоколу. Но если его сильно разозлить...'],
-      ['president', 'Тогда я повяжу галстук на голову. И начнётся кино.', 'rambo'],
+      ['hq', 'Attention. President Gold has arrived at the front. In person.'],
+      ['president', 'Sergeant! I decided this mission needs to look beautiful. So I\'m here.', 'happy'],
+      ['hero', 'Sir, it\'s dangerous.'],
+      ['president', 'Danger is my middle name. My first name is Gold. I have a golden pistol. Let\'s go.'],
+      ['hq', 'By protocol the President cannot die. But if you make him really angry...'],
+      ['president', '...then the tie goes on my head. And the movie starts.', 'rambo'],
     ],
     triggers: [
-      { col: 58, radio: ['president', 'Вода! Я не плаваю. Я хожу по воде. Почти.'] },
-      { col: 100, radio: ['hq', 'Подходите к точке эвакуации. Вертолёт ждёт.'] },
+      { col: 58, radio: ['president', 'Water! I don\'t swim. I walk on water. Almost.'] },
+      { col: 100, radio: ['hq', 'Approaching extraction. The chopper is waiting.'] },
     ],
     outro: [
-      ['president', 'Вот это была миссия. Я снял её на телефон. Себя, в основном.', 'happy'],
-      ['hero', 'Сэр, вы весь в песке.'],
-      ['president', 'Это не песок. Это золотая пыль победы.', 'happy'],
+      ['president', 'Now THAT was a mission. I filmed it on my phone. Mostly myself.', 'happy'],
+      ['hero', 'Sir, you\'re covered in sand.'],
+      ['president', 'That\'s not sand. That\'s the golden dust of victory.', 'happy'],
     ],
   },
 
   // ------------------------------------------------------------------ 5
-  { id: 'toll', title: 'БУДКА ЗА 2 МИЛЛИОНА', subtitle: 'Пролив. Палуба катера, мины, босс-сборщик пошлины.', theme: 'gulf', playable: false },
+  { id: 'toll', title: 'THE $2 MILLION TOLLBOOTH', subtitle: 'The strait. Boat deck, mines, a toll-collector boss.', theme: 'gulf', playable: false },
 
   // ------------------------------------------------------------------ 6
   {
-    id: 'mossad', title: 'ТЕНЬ МОССАДА', subtitle: 'Ночной рейд с агентом Ави.', theme: 'night', playable: true,
+    id: 'mossad', title: 'MOSSAD SHADOW', subtitle: 'Night raid with Agent Avi.', theme: 'night', playable: true,
     ally: 'mossad',
     objective: { type: 'launchers', time: 210 },
     allyBarks: [
-      'Я был здесь вчера. И позавчера.',
-      'Тихо. Слышишь? Это не шахед. Это сверчок.',
-      'Не стреляй по арбузам. Мы это уже проходили.',
-      'Мы знаем, где он. Мы всегда знаем.',
-      'После миссии — хумус. Я угощаю.',
-      'Этот пейджер лучше не трогать.',
+      'I was here yesterday. And the day before.',
+      'Quiet. Hear that? Not a Shahed. A cricket.',
+      'Don\'t shoot the watermelons. We\'ve been through this.',
+      'We know where he is. We always know.',
+      'Hummus after the mission. My treat.',
+      'Better not touch that pager.',
     ],
     level: {
       ground: 'r',
@@ -173,35 +173,35 @@ G.MISSIONS = [
       objects: 'P3 A6 S16 K12 L26 S33 T38 K52 S58 G60 L64 S68 H70:4 K80 S88 T92 S98 K102 L108 Y97:5 S116 K120 S124 L132 S138 H136',
     },
     intro: [
-      ['hq', 'Ночная операция. С вами агент Моссада. Позывной — Ави.'],
-      ['mossad', 'Шалом. Я уже прошёл этот уровень. Дважды. Просто иди за мной.'],
-      ['hero', 'Ты всегда впереди?'],
-      ['mossad', 'Всегда. Я отмечу пусковые красным. Остальное — твоя работа.'],
-      ['president', 'Моссад! Отличные ребята. Я их очень люблю. Они меня тоже. Наверное.', 'happy'],
+      ['hq', 'Night operation. A Mossad agent is with you. Call sign: Avi.'],
+      ['mossad', 'Shalom. I already beat this level. Twice. Just follow me.'],
+      ['hero', 'Are you always ahead?'],
+      ['mossad', 'Always. I\'ll mark the launchers in red. The rest is your job.'],
+      ['president', 'Mossad! Great guys. I love them very much. They love me too. Probably.', 'happy'],
     ],
     triggers: [
-      { col: 44, radio: ['mossad', 'Пропасть. Прыгай по платформам. Я уже на той стороне.'] },
-      { col: 100, radio: ['hq', 'Время уходит. Ускорьтесь.'] },
+      { col: 44, radio: ['mossad', 'A chasm. Jump across the platforms. I\'m already on the other side.'] },
+      { col: 100, radio: ['hq', 'Time is running out. Move faster.'] },
     ],
     outro: [
-      ['mossad', 'Чисто. Я уже доложил. Ещё до того, как ты закончил.'],
-      ['president', 'Великая совместная операция. Я придумал её лично. Вчера вечером.', 'happy'],
+      ['mossad', 'Clear. I already reported it. Before you were done.'],
+      ['president', 'A great joint operation. I came up with it myself. Last night.', 'happy'],
     ],
   },
 
   // ------------------------------------------------------------------ 7-12
-  { id: 'larak', title: 'ОСТРОВ ЛАРАК', subtitle: 'Зачистка пусковых на острове. Вызов HIMARS по рации.', theme: 'gulf', playable: false },
-  { id: 'missilecity', title: 'РАКЕТНЫЙ ГОРОД', subtitle: 'Подземные тоннели с ракетами на рельсах.', theme: 'night', playable: false },
-  { id: 'nuke', title: 'НАЙДИ БОМБУ', subtitle: 'Бункер с центрифугами и ящиками «Мирный атом».', theme: 'night', playable: false },
-  { id: 'hostages', title: 'ЗАБЫТЫЕ ЗАЛОЖНИКИ', subtitle: 'Тюрьма. Спаси пленных.', theme: 'city', playable: false },
-  { id: 'lucas', title: 'ШАХЕД НАОБОРОТ', subtitle: 'Управляй американским дроном LUCAS.', theme: 'desert', playable: false },
-  { id: 'final', title: 'АЯТОЛЛА-НЕВИДИМКА', subtitle: 'Финал. Босс прячется за голограммами.', theme: 'city', playable: false },
+  { id: 'larak', title: 'LARAK ISLAND', subtitle: 'Clear the launchers on the island. Call in HIMARS by radio.', theme: 'gulf', playable: false },
+  { id: 'missilecity', title: 'MISSILE CITY', subtitle: 'Underground tunnels with missiles on rails.', theme: 'night', playable: false },
+  { id: 'nuke', title: 'FIND THE BOMB', subtitle: 'A bunker full of centrifuges and "Peaceful Atom" crates.', theme: 'night', playable: false },
+  { id: 'hostages', title: 'FORGOTTEN HOSTAGES', subtitle: 'A prison. Free the captives.', theme: 'city', playable: false },
+  { id: 'lucas', title: 'SHAHED IN REVERSE', subtitle: 'Fly the American LUCAS drone.', theme: 'desert', playable: false },
+  { id: 'final', title: 'THE INVISIBLE AYATOLLAH', subtitle: 'Finale. The boss hides behind holograms.', theme: 'city', playable: false },
 ];
 
-// Реплики президента по рации на события
+// President's radio lines for game events
 G.PRESIDENT_BARKS = {
-  rage:    [['president', 'Мой галстук! Теперь ты — это я. Только в каске.', 'rambo']],
-  civilian:[['president', 'Это были АРБУЗЫ! Отличные арбузы. Мне их жаль.'], ['president', 'Ты взорвал фургон с коврами. Ковры были неплохие.']],
-  death:   [['president', 'Вставай, сержант! Победители не лежат. Только отдыхают.'], ['president', 'Это не поражение. Это тактическая пауза.']],
-  launcher:[['president', 'Бум! Красиво. Я бы поставил это на обложку.', 'happy'], ['hq', 'Пусковая уничтожена.']],
+  rage:    [['president', 'My tie! Now you\'re me. Just with a helmet.', 'rambo']],
+  civilian:[['president', 'Those were WATERMELONS! Beautiful watermelons. I feel bad for them.'], ['president', 'You blew up a carpet van. Those were nice carpets.']],
+  death:   [['president', 'Get up, Sergeant! Winners don\'t lie down. They just rest.'], ['president', 'That\'s not a defeat. It\'s a tactical pause.']],
+  launcher:[['president', 'Boom! Beautiful. I\'d put that on a magazine cover.', 'happy'], ['hq', 'Launcher destroyed.']],
 };

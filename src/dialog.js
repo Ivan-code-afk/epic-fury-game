@@ -70,7 +70,7 @@ G.Dialog = {
     const pt = (G.SPR.portrait[key] || G.SPR.portrait[this.cur.who + '_normal'])[talking ? 1 : 0];
     ctx.drawImage(pt, 10, y + 9);
     const cast = G.CONFIG.cast[this.cur.who] || { name: this.cur.who, color: '#fff' };
-    G.text(ctx, cast.name + (this.cur.mood === 'rambo' ? ' [РЕЖИМ РЭМБО]' : ''), 58, y + 5, { size: 8, color: cast.color });
+    G.text(ctx, cast.name + (this.cur.mood === 'rambo' ? ' [RAMBO MODE]' : ''), 58, y + 5, { size: 8, color: cast.color });
     const lines = G.wrap(ctx, this.cur.text, W - 76, 8);
     let left = Math.floor(this.shown);
     lines.slice(0, 4).forEach((l, i) => {

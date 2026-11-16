@@ -2,8 +2,8 @@
 window.G = window.G || {};
 
 G.CONFIG = {
-  title: 'ЗАВОЮЙ ИРАН',
-  subtitle: 'ОПЕРАЦИЯ «ЭПИЧЕСКАЯ ЯРОСТЬ»',
+  title: 'CONQUER IRAN',
+  subtitle: 'OPERATION EPIC FURY',
   W: 384,          // внутреннее разрешение
   H: 216,
   TILE: 16,
@@ -11,10 +11,10 @@ G.CONFIG = {
 
   // Персонажи. Имена и портреты — вымышленные заглушки, замените на свои.
   cast: {
-    president: { name: 'ПРЕЗИДЕНТ ГОЛД', color: '#ffd23f' },
-    hero:      { name: 'СЕРЖАНТ СТИЛ',  color: '#9fe870' },
-    mossad:    { name: 'АГЕНТ АВИ',     color: '#7ec8ff' },
-    hq:        { name: 'ШТАБ CENTCOM',  color: '#cccccc' },
+    president: { name: 'PRESIDENT GOLD', color: '#ffd23f' },
+    hero:      { name: 'SGT. STEEL',    color: '#9fe870' },
+    mossad:    { name: 'AGENT AVI',     color: '#7ec8ff' },
+    hq:        { name: 'CENTCOM HQ',    color: '#cccccc' },
   },
 
   player: {
