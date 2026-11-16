@@ -766,6 +766,143 @@
     },
   });
 
+  // Решётка камеры: прострели, чтобы открыть
+  G.Bars = function (x, y) {
+    Enemy.call(this, { kind: 'bars', x: x + 2, y: y + 16 - 34, w: 12, h: 34, hp: 5, score: 50 });
+  };
+  G.Bars.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.Bars.prototype, {
+    update(dt, g) {
+      this.flash -= dt;
+      if (this.dead) {
+        this.remove = true; G.Audio.play('explode');
+        for (let i = 0; i < 10; i++) g.particles.push(new G.Particle(cx(this), cy(this), (Math.random() - 0.5) * 160, -Math.random() * 160, 0.7, '#888', 2, 1));
+        g.floatText(cx(this), this.y - 4, 'CELL OPEN', '#9fe870');
+      }
+    },
+    draw(ctx, camX) {
+      const x = Math.round(this.x - camX), y = Math.round(this.y);
+      ctx.fillStyle = this.flash > 0 ? '#fff' : '#555'; ctx.fillRect(x, y, 12, 3); ctx.fillRect(x, y + 31, 12, 3);
+      ctx.fillStyle = this.flash > 0 ? '#fff' : '#888';
+      for (let i = 0; i < 4; i++) ctx.fillRect(x + 1 + i * 3, y + 3, 1, 28);
+      ctx.fillStyle = '#d4af37'; ctx.fillRect(x + 8, y + 15, 3, 4);
+    },
+  });
+
+  // Заложник: сидит связанный, после освобождения идёт за героем
+  G.Hostage = function (x, y, idx) {
+    Object.assign(this, { kind: 'hostage', x: x + 3, y: y - 2, w: 10, h: 18, vx: 0, vy: 0, hp: 3, state: 'captive', facing: 1, anim: 0, idx, bubble: null, helpT: Math.random() * 4, hurtT: 0, onGround: false });
+  };
+  G.Hostage.prototype = {
+    say(text) { this.bubble = { text, t: 2.8 }; },
+    update(dt, g) {
+      const p = g.player, L = g.level;
+      this.hurtT -= dt;
+      if (this.bubble) { this.bubble.t -= dt; if (this.bubble.t <= 0) this.bubble = null; }
+      if (this.state === 'dead') { this.vy += C.GRAVITY * dt; this.y += this.vy * dt; this.deadT -= dt; if (this.deadT <= 0) this.remove = true; return; }
+      if (this.state === 'captive') {
+        this.helpT -= dt;
+        if (this.helpT <= 0 && Math.abs(cx(p) - cx(this)) < 260) { this.say(G.pick(['HELP!', 'Over here!', 'Is someone there?'])); this.helpT = 5 + Math.random() * 3; }
+        const locked = g.entities.some(e => e.kind === 'bars' && !e.dead && Math.abs(cx(e) - cx(this)) < 44 && Math.abs(e.y + e.h - (this.y + this.h)) < 20);
+        if (!locked && !p.dead && overlap(this, p)) g.freeHostage(this);
+        return;
+      }
+      // идёт за героем цепочкой
+      const order = g.followers.indexOf(this);
+      const tx = p.x - p.facing * (18 + order * 14);
+      const dx = tx - this.x;
+      this.vx = Math.abs(dx) > 8 ? Math.sign(dx) * 92 : 0;
+      if (this.vx) this.facing = Math.sign(this.vx);
+      this.vy = Math.min(this.vy + C.GRAVITY * dt, 520);
+      const r = L.move(this, dt);
+      for (const lf of g.lifts || []) if (this.vy >= 0 && this.x + this.w > lf.x && this.x < lf.x + lf.w && Math.abs(this.y + this.h - lf.y) < 8) { this.y = lf.y - this.h; this.vy = 0; r.ground = true; }
+      this.onGround = r.ground;
+      if (this.onGround && (r.wall || p.y + p.h < this.y + this.h - 20) && Math.abs(dx) > 12) { this.vy = -340; this.onGround = false; }
+      if (this.vx && this.onGround) this.anim += dt * 9;
+      if (Math.abs(p.x - this.x) > 280 || this.y > L.pxH || L.inWater(this)) { this.x = p.x - p.facing * 20; this.y = p.y - 30; this.vy = 0; }
+    },
+    hit(g, dmg) {
+      if (this.state !== 'following' && this.state !== 'captive') return;
+      if (this.hurtT > 0) return;
+      this.hp -= dmg; this.hurtT = 0.8; G.Audio.play('hurt');
+      this.say(G.pick(['Ow!', 'They\'re shooting at us!', 'Careful!']));
+      if (this.hp <= 0) { this.state = 'dead'; this.deadT = 0.8; this.vy = -150; g.hostageLost(this); }
+    },
+    draw(ctx, camX) {
+      let img;
+      if (this.state === 'captive') img = G.SPR.hostageTied;
+      else img = G.SPR.hostage[this.state === 'dead' ? 'jump' : !this.onGround ? 'jump' : this.vx ? Math.floor(this.anim) % 4 : 0];
+      if (this.state === 'dead') ctx.globalAlpha = Math.max(0, this.deadT / 0.8);
+      if (this.hurtT > 0 && Math.floor(this.hurtT * 20) % 2) img = G.tintCache(img, '#fff');
+      drawSprite(ctx, img, this.x - camX - 4, this.y - 2, this.facing < 0);
+      ctx.globalAlpha = 1;
+    },
+    drawBubble(ctx, camX) { if (this.bubble) G.bubble(ctx, cx(this) - camX, this.y - 4, this.bubble.text); },
+  };
+
+  // Сторожевая собака
+  G.Dog = function (x, y) {
+    Enemy.call(this, { kind: 'dog', x, y: y + 6, w: 16, h: 10, hp: 2, facing: -1, score: 150, t: 0, biteCd: 0 });
+  };
+  G.Dog.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.Dog.prototype, {
+    update(dt, g) {
+      this.flash -= dt; this.t += dt; this.biteCd -= dt;
+      if (this.dead) { this.vy += C.GRAVITY * dt; this.y += this.vy * dt; this.deadT = (this.deadT ?? 0.5) - dt; if (this.deadT <= 0) this.remove = true; return; }
+      const p = g.player, dx = cx(p) - cx(this);
+      const chase = Math.abs(dx) < 230 && Math.abs(cy(p) - cy(this)) < 60 && !p.dead;
+      if (chase) { this.facing = Math.sign(dx) || 1; this.vx = this.facing * 135; if (this.t % 1.5 < dt) G.Audio.play('hit'); }
+      else this.vx = 0;
+      this.vy = Math.min(this.vy + C.GRAVITY * dt, 520);
+      const r = g.level.move(this, dt);
+      if (r.ground && r.wall && chase) this.vy = -260;
+      if (this.biteCd <= 0 && !p.dead && overlap(this, p)) { p.hurt(g, 1); this.biteCd = 0.8; this.vx = -this.facing * 120; }
+    },
+    onKill() { this.vy = -120; },
+    draw(ctx, camX) {
+      let img = G.SPR.dog[this.vx ? Math.floor(this.t * 12) % 2 : 0];
+      if (this.flash > 0) img = G.tintCache(img, '#fff');
+      if (this.dead) ctx.globalAlpha = Math.max(0, (this.deadT ?? 0.5) / 0.5);
+      drawSprite(ctx, img, this.x - camX - 2, this.y - 2, this.facing < 0);
+      ctx.globalAlpha = 1;
+    },
+  });
+
+  // Прожектор на вышке: луч ходит туда-сюда; попал в луч — тревога
+  G.Searchlight = function (x, y) {
+    Enemy.call(this, { kind: 'searchlight', x: x + 2, y: 34, w: 12, h: 10, hp: 2, score: 150, baseY: y + 16, t: Math.random() * 6, alarmT: 0 });
+  };
+  G.Searchlight.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.Searchlight.prototype, {
+    cone() {
+      const a = Math.PI / 2 + Math.sin(this.t * 0.8) * 0.75, len = 170, half = 0.16;
+      const ox = cx(this), oy = this.y + this.h;
+      return { ox, oy, a, len, half, x1: ox + Math.cos(a - half) * len, y1: oy + Math.sin(a - half) * len, x2: ox + Math.cos(a + half) * len, y2: oy + Math.sin(a + half) * len };
+    },
+    update(dt, g) {
+      this.flash -= dt; this.alarmT -= dt;
+      if (this.dead) return;
+      this.t += dt;
+      const c = this.cone(), p = g.player;
+      const px = cx(p) - c.ox, py = cy(p) - c.oy;
+      let da = Math.atan2(py, px) - c.a; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+      if (!p.dead && Math.abs(da) < c.half && Math.hypot(px, py) < c.len && this.alarmT <= 0) { this.alarmT = 9; g.raiseAlarm(this); }
+    },
+    kill(g) { this.dead = true; g.score += this.score; g.floatText(cx(this), this.y - 6, 'LIGHT OUT', '#fff'); G.Audio.play('hit'); },
+    draw(ctx, camX) {
+      const x = Math.round(cx(this) - camX);
+      ctx.fillStyle = '#333'; ctx.fillRect(x - 1, this.y + this.h, 3, this.baseY - this.y - this.h);
+      ctx.fillStyle = '#444'; ctx.fillRect(x - 8, this.y + this.h, 17, 3);
+      if (!this.dead) {
+        const c = this.cone();
+        ctx.fillStyle = this.alarmT > 0 ? 'rgba(255,60,60,.22)' : 'rgba(255,245,180,.2)';
+        ctx.beginPath(); ctx.moveTo(c.ox - camX, c.oy); ctx.lineTo(c.x1 - camX, c.y1); ctx.lineTo(c.x2 - camX, c.y2); ctx.closePath(); ctx.fill();
+      }
+      ctx.fillStyle = this.flash > 0 ? '#fff' : '#666'; ctx.fillRect(Math.round(this.x - camX), this.y, 12, 10);
+      ctx.fillStyle = this.dead ? '#222' : (this.alarmT > 0 ? '#ff5050' : '#fff8c0'); ctx.fillRect(Math.round(this.x - camX) + 2, this.y + 6, 8, 4);
+    },
+  });
+
   // Ракета РПГ (вражеская)
   G.EnemyRocket = function (x, y, dir) {
     Object.assign(this, { x, y, vx: dir * 60, dir, life: 3, owner: 'enemy' });
@@ -912,7 +1049,15 @@
   G.ExitFlag = function (x, y) { Object.assign(this, { kind: 'exit', x, y: y - 16, w: 16, h: 32 }); };
   G.ExitFlag.prototype = {
     update(dt, g) { if (!g.player.dead && overlap(this, g.player)) g.reachExit(); },
-    draw(ctx, camX) { ctx.drawImage(G.SPR.items.flag, Math.round(this.x - camX), this.y); },
+    draw(ctx, camX, g) {
+      if (g && g.mission.chopper) {
+        const x = Math.round(this.x - camX) - 28, y = this.y - 6 + Math.sin(g.time * 3) * 1.5;
+        ctx.drawImage(G.SPR.chopper, x, Math.round(y));
+        ctx.fillStyle = '#222'; const rw = 30 + Math.abs(Math.sin(g.time * 40)) * 34; ctx.fillRect(Math.round(x + 32 - rw / 2), Math.round(y + 3), Math.round(rw), 2);
+        return;
+      }
+      ctx.drawImage(G.SPR.items.flag, Math.round(this.x - camX), this.y);
+    },
   };
 
   // ============ ЭФФЕКТЫ ============

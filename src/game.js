@@ -31,6 +31,7 @@
       this.entities = []; this.bullets = []; this.particles = []; this.texts = [];
       this.player = null; this.ally = null; this.base = null; this.boss = null; this.depot = null;
       this.lifts = (m.level.lifts || []).map(l => new G.Lift(l[0], l[1], l[2]));
+      this.hostages = []; this.followers = []; this.alarmCount = 0;
       this.planted = false; this.escapeT = 0; this.rockT = 0;
       this.darkCanvas = null;
       this.score = 0; this.lives = C.player.lives; this.thermal = false;
@@ -51,6 +52,10 @@
           case 'O': this.entities.push(new G.Mine(s.x, s.y)); break;
           case 'U': this.entities.push(new G.SiteLauncher(s.x, s.y)); this.launchersLeft++; break;
           case 'Q': { const q = new G.Soldier(s.x, s.y); q.rpg = true; q.hp = 4; q.score = 200; this.entities.push(q); break; }
+          case 'h': { const hs = new G.Hostage(s.x, s.y, this.hostages.length); this.hostages.push(hs); this.entities.push(hs); break; }
+          case 'j': this.entities.push(new G.Bars(s.x, s.y)); break;
+          case 'g': this.entities.push(new G.Dog(s.x, s.y)); break;
+          case 'l': this.entities.push(new G.Searchlight(s.x, s.y)); break;
           case 'C': this.entities.push(new G.AtomCrate(s.x, s.y)); break;
           case 'F': this.entities.push(new G.Centrifuge(s.x, s.y)); break;
           case 'W': this.entities.push(new G.Laser(s.x, s.y, this.level)); break;
@@ -105,6 +110,11 @@
     reachExit() {
       const t = this.mission.objective.type;
       if (t === 'search' && !this.hasBomb && this.exitNagT <= 0) { this.exitNagT = 3; this.floatText(this.player.x, this.player.y - 10, 'FIND THE BOMB FIRST', '#ff6060'); }
+      if (t === 'rescue') {
+        const left = this.hostages.filter(h => h.state === 'captive').length;
+        if (left) { if (this.exitNagT <= 0) { this.exitNagT = 3; this.floatText(this.player.x, this.player.y - 10, left + ' HOSTAGES STILL INSIDE', '#ff6060'); } return; }
+        this.score += 1000 * this.followers.length; this.winMission(); return;
+      }
       if (t === 'reach' || (t === 'demolish' && this.planted) || (t === 'search' && this.hasBomb)) this.winMission();
     },
     plantCharge() {
@@ -121,6 +131,31 @@
       if (this.launchersLeft <= 0) this.pending = { t: 1.2, fn: () => this.winMission() };
     },
     civilianHit(kind) { this.radio(G.pick(G.PRESIDENT_BARKS[kind === 'scientist' ? 'scientist' : 'civilian'])); },
+    freeHostage(h) {
+      h.state = 'following'; this.followers.push(h); G.Audio.play('pickup'); this.score += 500;
+      const lines = this.mission.hostageLines || [];
+      h.say(lines[h.idx % lines.length] || 'Thank you!');
+      this.floatText(h.x + 5, h.y - 24, 'HOSTAGE FREED', '#9fe870');
+      if (this.hostages.every(x => x.state !== 'captive')) this.radio(this.mission.allFreedRadio);
+    },
+    hostageLost(h) {
+      this.followers = this.followers.filter(x => x !== h);
+      this.score -= 1000;
+      const alive = this.hostages.filter(x => x.state !== 'dead').length;
+      this.radio(['hq', 'We lost a hostage. ' + alive + ' still alive.']);
+      if (alive < (this.mission.objective.min || 1)) this.failMission('Too many hostages lost.');
+    },
+    raiseAlarm(light) {
+      this.alarmCount++; G.Audio.play('alarm'); this.shake = 3;
+      this.radio(G.pick([['hq', 'You\'ve been spotted! Guards incoming.'], ['mossad', 'Searchlight. Shoot the lamp next time.'], ['president', 'Alarm! Very loud. Like my rallies. Run!']]));
+      const T = C.TILE, camX = this.camX;
+      [camX + W + 12, camX - 28].forEach((x, i) => {
+        x = Math.max(16, Math.min(this.level.pxW - 32, x));
+        let y = this.player.y; while (y < this.level.pxH && !this.level.solidAt(x + 5, y + 18)) y += 4;
+        const e = i === 0 ? new G.Soldier(x, y + 2) : new G.Dog(x, y - 6);
+        this.entities.push(e);
+      });
+    },
     bombFound() {
       this.hasBomb = true; this.score += 3000; G.Audio.play('win'); this.shake = 4;
       this.floatText(this.player.x + 5, this.player.y - 14, 'BOMB CORE SECURED!', '#ffd23f');
@@ -182,6 +217,7 @@
         const p = this.player;
         if (Math.hypot(p.x + 5 - x, p.y + 9 - y) < r + 6) p.hurt(this, dmg || 1);
         if (this.ally && Math.hypot(this.ally.x - x, this.ally.y - y) < r + 6) this.ally.hit(this);
+        for (const h of this.followers) if (Math.hypot(h.x + 5 - x, h.y + 9 - y) < r + 6) h.hit(this, dmg || 1);
       }
     },
 
@@ -192,6 +228,7 @@
       } else {
         const p = this.player;
         if (!p.dead && G.overlap(box, p)) { p.hurt(this, b.dmg); b.remove = true; return; }
+        for (const h of this.followers) if (G.overlap(box, h)) { h.hit(this, b.dmg); b.remove = true; return; }
         if (this.ally && G.overlap(box, this.ally)) { this.ally.hit(this); b.remove = true; }
       }
     },
@@ -373,6 +410,14 @@
       const camX = Math.round(this.camX);
       G.Backgrounds.draw(ctx, this.mission.theme, camX, this.time);
       ctx.save(); ctx.translate(Math.round(sx), Math.round(sy));
+      // Задние стены зданий: [колонка_от, колонка_до, ряд_от, ряд_до]
+      for (const [c0, c1, r0, r1] of this.mission.level.backdrops || []) {
+        const x0 = c0 * T - camX, w = (c1 - c0 + 1) * T, y0 = r0 * T, h = (r1 - r0 + 1) * T;
+        ctx.fillStyle = '#2a2d33'; ctx.fillRect(x0, y0, w, h);
+        ctx.fillStyle = '#23262b';
+        for (let yy = y0; yy < y0 + h; yy += 8) ctx.fillRect(x0, yy, w, 1);
+        for (let yy = y0, k = 0; yy < y0 + h; yy += 8, k++) for (let xx = x0 + (k % 2) * 8; xx < x0 + w; xx += 16) ctx.fillRect(xx, yy, 1, 8);
+      }
       this.level.draw(ctx, camX);
       ctx.fillStyle = '#20160c'; ctx.fillRect(0, this.level.pxH, W, H - this.level.pxH + 10);
       if (this.thermal) { ctx.fillStyle = 'rgba(0,8,40,.78)'; ctx.fillRect(-10, -10, W + 20, H + 20); }
@@ -388,6 +433,7 @@
       for (const t of this.texts) G.text(ctx, t.text, Math.round(t.x - camX), Math.round(t.y), { size: 7, align: 'center', color: t.color });
       if (this.mission.dark) this.drawDarkness(camX);
       if (this.ally) this.ally.drawBubble(ctx, camX);
+      for (const h of this.hostages || []) h.drawBubble(ctx, camX);
       for (const st of this.strikeQ) {
         if (st.fired) continue;
         const p = this.player, tx = Math.round(st.x - camX), ty = Math.round(st.y);
@@ -442,6 +488,11 @@
       let obj = '';
       if (o.type === 'reach') obj = 'REACH THE FLAG →';
       if (o.type === 'boss') obj = 'SHUT DOWN THE TOLLBOOTH →';
+      if (o.type === 'rescue') {
+        const freed = this.followers.length, total = this.hostages.length;
+        const captive = this.hostages.filter(h => h.state === 'captive').length;
+        obj = captive ? 'HOSTAGES ' + freed + '/' + total : 'GET TO THE CHOPPER →';
+      }
       if (o.type === 'search') {
         obj = this.hasBomb ? 'EXTRACT THE BOMB →' : 'FIND THE BOMB';
         if (!this.hasBomb) {

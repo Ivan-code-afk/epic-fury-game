@@ -336,7 +336,47 @@ G.MISSIONS = [
       ['president', 'Fine. But I get a photo with it.', 'happy'],
     ],
   },
-  { id: 'hostages', title: 'FORGOTTEN HOSTAGES', subtitle: 'A prison. Free the captives.', theme: 'city', playable: false },
+  {
+    id: 'hostages', title: 'FORGOTTEN HOSTAGES', subtitle: 'Night raid on a prison. Five hostages. Bring them home.', theme: 'night', playable: true,
+    objective: { type: 'rescue', min: 3 },
+    chopper: true,
+    level: {
+      ground: 'c',
+      terrain: R('2', 150),
+      platforms: [
+        [82, 1, 43, 'c'], [87, 6, 38, 'c'],
+        [83, 8, 3], [40, 8, 4], [60, 7, 4],
+      ],
+      blocks: [[30, 10, 'b'], [30, 9, 'b'], [31, 10, 'b'], [56, 10, 'b'], [76, 10, 'b'], [76, 9, 'b'],
+        [82, 2, 'c'], [82, 3, 'c'], [82, 4, 'c'], [82, 5, 'c'], [82, 6, 'c'], [124, 2, 'c'], [124, 3, 'c'], [124, 4, 'c']],
+      backdrops: [[82, 124, 2, 10]],
+      objects: 'P2 g12 S16 l22 S27 H36 g34 l46 S50 G42:7 T58 g62 Q61:6 l68 S72 Y79 j92 h93 S100 g97 j96:5 h98:5 j104 h105 Q108 S110:5 T116:5 j112:5 h114:5 j118 h119 S122:5 H121 S130 Q134 g138 H128 E146',
+    },
+    intro: [
+      ['hq', 'A political prison outside the capital. Five Western hostages, held for years. Tonight they go home.'],
+      ['mossad', 'Searchlights sweep the yard. Get caught in the light and guards come running. Or just shoot the lamps.'],
+      ['hq', 'Shoot the cell bars to open them. Freed hostages will follow you. We need at least three of them home alive.'],
+      ['president', 'Hostages! Very important. I\'ll be on TV when they land. Big TV. Bring them home, Sergeant.'],
+    ],
+    triggers: [
+      { col: 9, radio: ['hq', 'Guard dogs. Fast and angry. Don\'t let them corner you.'] },
+      { col: 80, radio: ['hq', 'The cell block. Hostages on both floors. Use the steps on the left to go up.'] },
+    ],
+    hostageLines: [
+      'Thank you! Four hundred days in here!',
+      'Is the internet still a thing?',
+      'Who\'s president now? ...Gold? Can I stay?',
+      'I\'m a journalist. Can I quote you?',
+      'Finally! My cellmate snored.',
+    ],
+    allFreedRadio: ['hq', 'All hostages free. The chopper is waiting on the far right.'],
+    outro: [
+      ['hq', 'Chopper is airborne with the hostages. Everyone is going home.'],
+      ['president', 'Welcome home! Huge ceremony. I\'ll give the speech. You can stand behind me.', 'happy'],
+      ['hero', 'Sir, they want to thank you.'],
+      ['president', 'Of course they do. Everybody does.', 'happy'],
+    ],
+  },
   { id: 'lucas', title: 'SHAHED IN REVERSE', subtitle: 'Fly the American LUCAS drone.', theme: 'desert', playable: false },
   { id: 'final', title: 'THE INVISIBLE AYATOLLAH', subtitle: 'Finale. The boss hides behind holograms.', theme: 'city', playable: false },
 ];

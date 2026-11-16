@@ -42,7 +42,7 @@ Add an object to `G.MISSIONS` in `src/missions.js`:
   id: 'my', title: 'TITLE', subtitle: 'Description', theme: 'desert', // desert | gulf | city | night
   playable: true,
   ally: null,                        // 'president' | 'mossad' | null
-  objective: { type: 'reach' },      // reach | defend (waves) | launchers (time; add special: 'himars', strikes: 3) | boss | demolish (escape: seconds) | search (minCol: bomb crate is picked right of this column)
+  objective: { type: 'reach' },      // reach | defend (waves) | launchers (time; add special: 'himars', strikes: 3) | boss | demolish (escape: seconds) | search (minCol: bomb crate is picked right of this column) | rescue (min: hostages that must survive; mission field `chopper: true` draws a helicopter at the exit)
   level: {
     ground: '#',                     // # sand, r rock, c concrete, d ship deck
     // theme can also be 'tunnel' or 'lab'
@@ -64,7 +64,9 @@ Objects: `P` player, `A` partner, `S` soldier, `T` machine-gunner, `L` launcher 
 `V` missile rail cart, `J` missile depot (touch to plant C4),
 `C` PEACEFUL ATOM crate (one random crate holds the bomb), `F` centrifuge (leaks gas when shot), `W` timed laser barrier, `I` scientist (civilian, ducks when you fire toward him).
 
-Extra level fields: `lifts: [[column, topRow, bottomRow]]`, `lamps: [[column, row]]`, `door: [[column, row]]` (tiles removed when C4 is planted). Mission field `dark: 0.86` turns on darkness with a flashlight.
+All uppercase letters are taken, so newer objects use lowercase: `h` hostage, `j` cell bars, `g` guard dog, `l` searchlight tower.
+
+Extra level fields: `lifts: [[column, topRow, bottomRow]]`, `lamps: [[column, row]]`, `door: [[column, row]]` (tiles removed when C4 is planted), `backdrops: [[colFrom, colTo, rowFrom, rowTo]]` (interior back walls). Mission field `dark: 0.86` turns on darkness with a flashlight.
 
 While jumping, hold DOWN to shoot straight down.
 
@@ -73,4 +75,4 @@ All sprites live in `G.SPR` (`src/sprites.js`). To replace one, load an `Image` 
 e.g. `G.SPR.president[0] = myImage`. Frame sizes are noted in the code.
 
 ## Status
-Missions 1–9 are playable. The rest show as "COMING SOON" in the menu.
+Missions 1–10 are playable. The rest show as "COMING SOON" in the menu.
