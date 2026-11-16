@@ -35,6 +35,7 @@
 
       this.crouch = I.down('down') && this.onGround;
       this.aimUp = I.down('up');
+      this.aimDown = !this.onGround && I.down('down') && !this.aimUp;
       let move = 0;
       if (!this.crouch) { if (I.down('left')) move -= 1; if (I.down('right')) move += 1; }
       if (move) this.facing = move;
@@ -80,10 +81,10 @@
       if (this.weapon !== 'rifle' && this.ammo[this.weapon] <= 0) { this.weapon = 'rifle'; w = C.weapons.rifle; }
       this.fireCd = w.rate * (this.rage ? 0.4 : 1);
       if (this.weapon !== 'rifle') this.ammo[this.weapon]--;
-      let ang = this.aimUp ? -Math.PI / 2 : (this.facing > 0 ? 0 : Math.PI);
+      let ang = this.aimUp ? -Math.PI / 2 : this.aimDown ? Math.PI / 2 : (this.facing > 0 ? 0 : Math.PI);
       ang += (Math.random() - 0.5) * w.spread * 2;
-      const mx = this.aimUp ? cx(this) + this.facing * 2 : cx(this) + this.facing * 9;
-      const my = this.aimUp ? this.y - 4 : this.y + (this.crouch ? 5 : 8);
+      const mx = this.aimUp || this.aimDown ? cx(this) + this.facing * 2 : cx(this) + this.facing * 9;
+      const my = this.aimUp ? this.y - 4 : this.aimDown ? this.y + this.h + 2 : this.y + (this.crouch ? 5 : 8);
       if (w.homing) {
         g.bullets.push(new G.Rocket(mx, my, ang, 'player'));
         G.Audio.play('rocket');
@@ -109,7 +110,8 @@
       if (this.invuln > 0 && Math.floor(this.invuln * 20) % 2) return;
       const set = this.rage ? G.SPR.rambo : G.SPR.hero;
       let f = this.crouch ? 'crouch' : !this.onGround ? 'jump' : this.vx ? Math.floor(this.anim) % 4 : 0;
-      const img = set[f + (this.aimUp && !this.crouch ? '_up' : '')] || set[f];
+      const suffix = this.aimUp && !this.crouch ? '_up' : this.aimDown && f === 'jump' ? '_down' : '';
+      const img = set[f + suffix] || set[f];
       const yoff = this.crouch ? this.h - 20 : -2;
       drawSprite(ctx, img, this.x - camX - 4, this.y + yoff, this.facing < 0);
     },
@@ -294,6 +296,7 @@
     update(dt, g) {
       this.flash -= dt; this.t += dt;
       if (this.dead) { g.explode(cx(this), cy(this), 16, 'none'); this.remove = true; return; }
+      if (this.dormant) { if (Math.abs(cx(g.player) - cx(this)) < 300) this.dormant = false; else return; }
       const target = g.base && !g.base.dead ? g.base : g.player;
       const dx = cx(target) - cx(this);
       if (!this.diving && Math.abs(dx) < 70) this.diving = true;
@@ -377,12 +380,157 @@
     },
   };
 
+  // Катер КСИР: ходит по воде между палубами и стреляет
+  G.Speedboat = function (x, y) {
+    Enemy.call(this, { kind: 'boat', x, y: 0, w: 34, h: 14, hp: 5, facing: -1, fireCd: 1.5, burst: 0, score: 300, t: 0 });
+    this.y = G.Speedboat.waterY - 12;
+  };
+  G.Speedboat.waterY = 11 * 16;
+  G.Speedboat.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.Speedboat.prototype, {
+    update(dt, g) {
+      this.flash -= dt; this.t += dt;
+      if (this.dead) { g.explode(cx(this), cy(this), 26, 'none'); this.remove = true; return; }
+      const L = g.level, nx = this.x + this.facing * 40 * dt;
+      const front = this.facing > 0 ? nx + this.w + 2 : nx - 2;
+      if (L.solidAt(front, this.y + 10) || front < 0 || front > L.pxW) this.facing *= -1; else this.x = nx;
+      this.y = G.Speedboat.waterY - 12 + Math.sin(this.t * 3) * 1.5;
+      if (Math.random() < 0.3) g.particles.push(new G.Particle(this.facing > 0 ? this.x : this.x + this.w, this.y + 14, -this.facing * 30, -20, 0.4, '#e8f4ff', 2, 0.5));
+      const p = g.player;
+      if (p.dead || Math.abs(cx(p) - cx(this)) > 230) return;
+      this.fireCd -= dt;
+      if (this.fireCd <= 0) {
+        if (this.burst <= 0) this.burst = 2;
+        this.burst--; this.fireCd = this.burst > 0 ? 0.18 : 1.7;
+        const gx = this.facing < 0 ? this.x + 3 : this.x + this.w - 3;
+        const ang = Math.atan2(cy(p) - (this.y + 6), cx(p) - gx);
+        g.bullets.push(new G.Bullet(gx, this.y + 6, Math.cos(ang) * 150, Math.sin(ang) * 150, 'enemy', 1));
+      }
+    },
+    draw(ctx, camX, g) {
+      let img = G.SPR.speedboat;
+      if (this.flash > 0) img = G.tintCache(img, '#fff');
+      drawSprite(ctx, img, this.x - camX - 1, this.y - 4, this.facing > 0);
+    },
+  });
+
+  // Морская мина: качается на воде и выпрыгивает
+  G.Mine = function (x, y) {
+    Enemy.call(this, { kind: 'mine', x: x + 2, y: 0, w: 12, h: 12, hp: 1, vy: 0, jumpT: 1 + Math.random() * 2, score: 50, t: Math.random() * 6 });
+    this.surface = G.Speedboat.waterY - 8; this.y = this.surface;
+  };
+  G.Mine.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.Mine.prototype, {
+    update(dt, g) {
+      this.t += dt;
+      if (this.dead) { g.explode(cx(this), cy(this), 26, 'player', 4); this.remove = true; return; }
+      if (this.y >= this.surface && this.vy >= 0) {
+        this.y = this.surface + Math.sin(this.t * 3) * 1.5; this.vy = 0;
+        this.jumpT -= dt;
+        if (this.jumpT <= 0 && Math.abs(cx(g.player) - cx(this)) < 160) { this.vy = -300 - Math.random() * 80; this.jumpT = 2 + Math.random() * 1.5; G.Audio.play('jump'); }
+      } else { this.vy += C.GRAVITY * 0.8 * dt; this.y += this.vy * dt; }
+      if (!g.player.dead && overlap(this, g.player)) {
+        this.dead = true; this.remove = true; g.explode(cx(this), cy(this), 22, 'enemy', 2);
+      }
+    },
+    draw(ctx, camX) { ctx.drawImage(G.SPR.mine, Math.round(this.x - camX - 1), Math.round(this.y - 1)); },
+  });
+
+  // БОСС: будка сборщика пошлины. Урон проходит, только когда окно открыто.
+  G.TollBooth = function (x, y) {
+    Enemy.call(this, {
+      kind: 'boss', boss: true, x: x - 40, y: y + 16 - 72, w: 56, h: 72, hp: 80, maxHp: 80, active: false,
+      open: false, cycleT: 2, billCd: 1.5, droneCd: 6, phase: 0, price: 2, deathT: 0, score: 5000,
+    });
+  };
+  G.TollBooth.prototype = Object.create(Enemy.prototype);
+  Object.assign(G.TollBooth.prototype, {
+    damage(g, dmg) {
+      if (this.dead || !this.active) return;
+      if (!this.open) {
+        G.Audio.play('hit');
+        if (Math.random() < 0.15) g.floatText(cx(this), this.y + 20, 'CLOSED', '#aaa');
+        return;
+      }
+      this.hp -= dmg; this.flash = 0.08; G.Audio.play('hit');
+      const phase = Math.floor((1 - this.hp / this.maxHp) * 4);
+      if (phase > this.phase && this.hp > 0) { this.phase = phase; g.bossPhase(this, phase); }
+      if (this.hp <= 0) { this.dead = true; this.deathT = 2.2; g.score += this.score; }
+    },
+    update(dt, g) {
+      this.flash -= dt;
+      const p = g.player;
+      if (this.dead) {
+        this.deathT -= dt;
+        if (Math.random() < 0.2) g.explode(this.x + Math.random() * this.w, this.y + Math.random() * this.h, 20, 'none');
+        for (let i = 0; i < 2; i++) g.particles.push(new G.Particle(this.x + Math.random() * this.w, this.y + 20, (Math.random() - 0.5) * 160, -100 - Math.random() * 160, 2, Math.random() < 0.5 ? '#6aa84f' : '#b6d7a8', 3, 0.25));
+        if (this.deathT <= 0) { this.remove = true; g.bossDefeated(this); }
+        return;
+      }
+      if (!this.active) {
+        if (Math.abs(cx(p) - cx(this)) < 230) { this.active = true; g.bossIntro(this); }
+        return;
+      }
+      // окно открывается и закрывается
+      this.cycleT -= dt;
+      if (this.cycleT <= 0) { this.open = !this.open; this.cycleT = this.open ? 2.6 : 1.6 - this.phase * 0.2; }
+      const rage = 1 + this.phase * 0.3;
+      // счета-купюры по дуге
+      this.billCd -= dt * rage;
+      if (this.billCd <= 0 && !p.dead) {
+        this.billCd = 1.4;
+        const n = this.phase >= 2 ? 3 : 1;
+        for (let i = 0; i < n; i++) {
+          const sx = this.x + 14, sy = this.y + 30, t = 0.9 + i * 0.18;
+          const b = new G.Bullet(sx, sy, (cx(p) - sx) / t, 0, 'enemy', 1);
+          b.grav = 600; b.vy = (cy(p) - sy) / t - 0.5 * b.grav * t; b.bill = true; b.life = 3;
+          g.bullets.push(b);
+        }
+      }
+      // вызывает дроны
+      this.droneCd -= dt;
+      if (this.droneCd <= 0) {
+        this.droneCd = Math.max(3.5, 8 - this.phase * 1.5);
+        g.entities.push(new G.Drone(this.x + 20, this.y - 10, 55 + this.phase * 8));
+      }
+    },
+    draw(ctx, camX, g) {
+      const x = Math.round(this.x - camX), y = Math.round(this.y), fl = this.flash > 0;
+      // шлагбаум
+      ctx.fillStyle = '#555'; ctx.fillRect(x - 4, y + 44, 6, 28);
+      for (let i = 0; i < 10; i++) { ctx.fillStyle = i % 2 ? '#fff' : '#d22'; ctx.fillRect(x - 64 + i * 6, y + 44, 6, 4); }
+      // основание и кабина
+      ctx.fillStyle = fl ? '#fff' : '#8d9196'; ctx.fillRect(x, y + 52, 56, 20);
+      ctx.fillStyle = fl ? '#fff' : '#e8e4d8'; ctx.fillRect(x + 4, y + 16, 48, 38);
+      ctx.fillStyle = '#b8b4a8'; ctx.fillRect(x + 4, y + 50, 48, 2);
+      for (let i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? '#fff' : '#d22'; ctx.fillRect(x + i * 7, y + 10, 7, 6); } // крыша
+      // вывеска с ценой
+      ctx.fillStyle = '#1a2a1a'; ctx.fillRect(x - 6, y - 4, 68, 13);
+      G.text(ctx, 'TOLL $' + this.price + ',000,000', x + 28, y - 2, { size: 7, align: 'center', color: '#ffd23f', shadow: false });
+      // окно
+      const wx = x + 10, wy = y + 22;
+      if (this.open || this.dead) {
+        ctx.fillStyle = '#2a3a1a'; ctx.fillRect(wx, wy, 26, 22);
+        const pt = G.SPR.portrait.toll_normal[Math.floor(g.time * 6) % 2];
+        ctx.drawImage(pt, 6, 4, 28, 28, wx + 2, wy + 1, 22, 22);
+      } else {
+        ctx.fillStyle = '#9aa0a6'; ctx.fillRect(wx, wy, 26, 22);
+        for (let i = 0; i < 6; i++) { ctx.fillStyle = '#7a8086'; ctx.fillRect(wx, wy + 2 + i * 4, 26, 1); }
+        G.text(ctx, 'CLOSED', wx + 13, wy + 8, { size: 6, align: 'center', color: '#d22', shadow: false });
+      }
+      ctx.fillStyle = '#444'; ctx.fillRect(wx - 1, wy - 1, 28, 1); ctx.fillRect(wx - 1, wy + 22, 28, 1);
+      // касса
+      ctx.fillStyle = '#333'; ctx.fillRect(x + 40, y + 34, 10, 10); ctx.fillStyle = '#6f6'; ctx.fillRect(x + 41, y + 35, 8, 3);
+    },
+  });
+
   // ============ СНАРЯДЫ ============
   G.Bullet = function (x, y, vx, vy, owner, dmg) {
     Object.assign(this, { x, y, vx, vy, owner, dmg, life: 1.4, w: 3, h: 2, color: owner === 'enemy' ? '#ff9a3a' : '#fff6a0' });
   };
   G.Bullet.prototype = {
     update(dt, g) {
+      if (this.grav) this.vy += this.grav * dt;
       this.x += this.vx * dt; this.y += this.vy * dt; this.life -= dt;
       if (this.life <= 0) return this.remove = true;
       if (g.level.solidAt(this.x, this.y)) {
@@ -394,6 +542,7 @@
       g.bulletHits(this);
     },
     draw(ctx, camX) {
+      if (this.bill) { ctx.drawImage(G.SPR.bill, Math.round(this.x - camX) - 5, Math.round(this.y) - 2); return; }
       ctx.fillStyle = this.color;
       if (Math.abs(this.vy) > Math.abs(this.vx)) ctx.fillRect(Math.round(this.x - camX) - 1, Math.round(this.y) - 2, 2, 4);
       else ctx.fillRect(Math.round(this.x - camX) - 2, Math.round(this.y) - 1, 4, 2);

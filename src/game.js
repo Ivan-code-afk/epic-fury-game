@@ -29,7 +29,7 @@
       this.missionIdx = i; this.mission = m;
       this.level = G.Level.fromSpec(m.level);
       this.entities = []; this.bullets = []; this.particles = []; this.texts = [];
-      this.player = null; this.ally = null; this.base = null;
+      this.player = null; this.ally = null; this.base = null; this.boss = null;
       this.score = 0; this.lives = C.player.lives; this.thermal = false;
       this.firedTriggers = {}; this.radioQ = []; this.radioCur = null;
       this.timer = m.objective.time || 0;
@@ -43,7 +43,10 @@
           case 'T': this.entities.push(new G.Turret(s.x, s.y)); break;
           case 'L': this.entities.push(new G.Truck(s.x, s.y, true, 0)); this.launchersLeft++; break;
           case 'K': this.entities.push(new G.Truck(s.x, s.y, false, ++k)); break;
-          case 'D': this.entities.push(new G.Drone(s.x, s.y, 50)); break;
+          case 'D': { const d = new G.Drone(s.x, s.y, 50); d.dormant = true; this.entities.push(d); break; }
+          case 'B': this.entities.push(new G.Speedboat(s.x, s.y)); break;
+          case 'O': this.entities.push(new G.Mine(s.x, s.y)); break;
+          case 'Z': this.boss = new G.TollBooth(s.x, s.y); this.entities.push(this.boss); break;
           case 'X': this.base = new G.Base(s.x, s.y, m.objective.baseHp); break;
           case 'E': this.entities.push(new G.ExitFlag(s.x, s.y)); break;
           default: if ('HMNGY'.includes(s.type)) this.entities.push(new G.Pickup(s.type, s.x, s.y));
@@ -89,6 +92,21 @@
       if (this.launchersLeft <= 0) this.pending = { t: 1.2, fn: () => this.winMission() };
     },
     civilianHit() { this.radio(G.pick(G.PRESIDENT_BARKS.civilian)); },
+    // ---------- БОСС ----------
+    cutscene(lines) {
+      if (!lines || !lines.length) return;
+      this.state = 'talk';
+      G.Dialog.start(lines, () => { if (this.state === 'talk') this.state = 'play'; });
+    },
+    bossIntro(b) { this.cutscene(this.mission.bossIntro); },
+    bossPhase(b, phase) {
+      const lines = this.mission.bossPhases || [];
+      const l = lines[phase - 1];
+      if (l) { this.radio(l.radio); b.price = l.price; this.floatText(b.x + b.w / 2, b.y - 10, '$' + l.price + ',000,000!', '#ffd23f'); }
+      this.shake = 6; G.Audio.play('alarm');
+    },
+    bossDefeated() { if (this.mission.objective.type === 'boss') this.winMission(); },
+
     presidentBark(kind) { const l = G.PRESIDENT_BARKS[kind]; if (l) this.radio(G.pick(l)); },
 
     radio(line) { if (line) this.radioQ.push({ who: line[0], text: line[1], mood: line[2] || 'normal', t: 3.8 }); },
@@ -166,7 +184,7 @@
         return;
       }
       if (this.state === 'select') return this.updateSelect();
-      if (this.state === 'briefing' || this.state === 'outro') { G.Dialog.update(dt); return; }
+      if (this.state === 'briefing' || this.state === 'outro' || this.state === 'talk') { G.Dialog.update(dt); return; }
       if (this.state === 'win' || this.state === 'fail') {
         if (I.pressed('start') || I.pressed('fire') || I.pressed('tap')) {
           if (this.state === 'fail') this.startMission(this.missionIdx);
@@ -251,7 +269,7 @@
       if (this.state === 'select') return this.drawSelect();
       this.drawWorld();
       this.drawHUD();
-      if (this.state === 'briefing' || this.state === 'outro') {
+      if (this.state === 'briefing' || this.state === 'outro' || this.state === 'talk') {
         if (this.state === 'briefing') {
           ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, 0, W, H);
           G.text(ctx, 'MISSION ' + (this.missionIdx + 1), W / 2, 34, { size: 9, align: 'center', color: '#ffd23f' });
@@ -303,6 +321,15 @@
       if (p.rage > 0) G.text(ctx, 'FURY ' + Math.ceil(p.rage), 180, 3, { size: 8, color: '#ff4040' });
       let obj = '';
       if (o.type === 'reach') obj = 'REACH THE FLAG →';
+      if (o.type === 'boss') obj = 'SHUT DOWN THE TOLLBOOTH →';
+      const b = this.boss;
+      if (b && b.active && !b.remove && b.x - this.camX < W + 40) {
+        const bw = 160, bx = (W - bw) / 2, by = H - 12;
+        ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(bx - 2, by - 10, bw + 4, 18);
+        G.text(ctx, (o.bossName || 'BOSS') + (b.open ? '' : '  [CLOSED]'), W / 2, by - 9, { size: 7, align: 'center', color: b.open ? '#ffd23f' : '#999' });
+        ctx.fillStyle = '#400'; ctx.fillRect(bx, by, bw, 4);
+        ctx.fillStyle = '#e02020'; ctx.fillRect(bx, by, bw * Math.max(0, b.hp / b.maxHp), 4);
+      }
       if (o.type === 'defend') {
         obj = 'WAVE ' + Math.max(1, this.waveIdx + 1) + '/' + o.waves.length;
         if (this.base) {

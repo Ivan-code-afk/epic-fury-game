@@ -15,6 +15,7 @@ G.CONFIG = {
     hero:      { name: 'SGT. STEEL',    color: '#9fe870' },
     mossad:    { name: 'AGENT AVI',     color: '#7ec8ff' },
     hq:        { name: 'CENTCOM HQ',    color: '#cccccc' },
+    toll:      { name: 'TOLL COLLECTOR', color: '#d4af37' },
   },
 
   player: {

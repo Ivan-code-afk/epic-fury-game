@@ -1,6 +1,6 @@
 // Уровень: ASCII-карта -> тайлы + точки появления сущностей
 //
-// Тайлы:   # песок   r камень   c бетон   = платформа (запрыгнуть снизу)
+// Тайлы:   # песок   r камень   c бетон   d палуба корабля   = платформа (запрыгнуть снизу)
 //          b мешки с песком   x ящик (разрушаемый)   ~ вода (смерть)   . пусто
 // Объекты: P игрок   A напарник   S солдат   T пулемётчик   L пусковая под видом грузовика
 //          K обычный грузовик (мирный!)   X база (защищать)   E флаг выхода
@@ -16,7 +16,7 @@ G.Level = function (rows) {
     const row = [];
     for (let x = 0; x < this.w; x++) {
       const ch = rows[y][x] || '.';
-      if ('#rc=bx~'.includes(ch)) row.push(ch);
+      if ('#rc=bx~d'.includes(ch)) row.push(ch);
       else {
         row.push('.');
         if (ch !== '.' && ch !== ' ') this.spawns.push({ type: ch, x: x * T, y: y * T });
@@ -71,7 +71,7 @@ G.Level.prototype = {
     if (ty >= this.h) return '.';
     return this.tiles[ty][tx];
   },
-  isSolid(ch) { return ch === '#' || ch === 'r' || ch === 'c' || ch === 'b' || ch === 'x'; },
+  isSolid(ch) { return ch === '#' || ch === 'r' || ch === 'c' || ch === 'b' || ch === 'x' || ch === 'd'; },
   solidAt(px, py) { const T = G.CONFIG.TILE; return this.isSolid(this.at(Math.floor(px / T), Math.floor(py / T))); },
 
   // Двигает тело e (x,y,w,h,vx,vy) с учётом тайлов. Возвращает флаги столкновений.
@@ -133,6 +133,7 @@ G.Level.prototype = {
         if (ch === '#') img = this.isSolid(above) ? S.sand : S.sandTop;
         else if (ch === 'r') img = this.isSolid(above) ? S.rock : S.rockTop;
         else if (ch === 'c') img = S.concrete;
+        else if (ch === 'd') img = this.isSolid(above) ? S.hull : S.deckTop;
         else if (ch === '=') img = S.platform;
         else if (ch === 'b') img = S.sandbag;
         else if (ch === 'x') img = S.crate;

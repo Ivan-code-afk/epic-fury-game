@@ -4,6 +4,7 @@
 //   'reach'     — get to flag E
 //   'defend'    — survive all drone waves; base X must survive
 //   'launchers' — destroy every launcher L before time runs out (V = thermal)
+//   'boss'      — defeat the boss Z (bossIntro: cutscene, bossPhases: lines at 25/50/75% damage)
 //
 // Dialogue: [who, text, mood]   who: president | hero | mossad | hq   mood: normal | happy | rambo
 // triggers: { col: map column, radio: [who, text, mood] } — short radio line, no pause
@@ -150,7 +151,47 @@ G.MISSIONS = [
   },
 
   // ------------------------------------------------------------------ 5
-  { id: 'toll', title: 'THE $2 MILLION TOLLBOOTH', subtitle: 'The strait. Boat deck, mines, a toll-collector boss.', theme: 'gulf', playable: false },
+  {
+    id: 'toll', title: 'THE $2 MILLION TOLLBOOTH', subtitle: 'Hop the ships across the strait. Shut down the toll.', theme: 'gulf', playable: true,
+    objective: { type: 'boss', bossName: 'TOLL COLLECTOR' },
+    level: {
+      ground: 'd',
+      terrain: R('3', 16) + R('_', 3) + R('4', 14) + R('_', 10) + R('3', 14) + R('_', 3) + R('4', 14) + R('_', 10) + R('3', 8) + R('_', 3) + R('3', 30),
+      platforms: [[35, 9, 2], [39, 8, 2], [76, 8, 2], [80, 9, 2], [101, 6, 4], [109, 6, 4]],
+      blocks: [[12, 9, 'x'], [27, 8, 'b'], [47, 9, 'x'], [48, 9, 'x'], [66, 8, 'b'], [88, 9, 'x']],
+      objects: 'P2 S10 O17 S24 S30 B34 O41 D44:4 S50 S55 O58 M62:7 S64 S70 B75 O82 D86:3 H86 S90 O93 G97 Z122',
+    },
+    intro: [
+      ['hq', 'The Strait of Hormuz is closed. Someone set up a tollbooth in the middle of the sea. Two million dollars per ship.'],
+      ['president', 'Two million? For WATER? I have made bad deals... no. I have never made a bad deal. This is a bad deal.'],
+      ['hero', 'Orders, sir?'],
+      ['president', 'Don\'t pay. Never pay. Jump ship to ship and shut that booth down.', 'rambo'],
+      ['hq', 'Speedboats in the water. While jumping, hold DOWN to shoot straight down. Watch for jumping mines.'],
+    ],
+    triggers: [
+      { col: 15, radio: ['hq', 'Mines love jumping. Time your leaps.'] },
+      { col: 32, radio: ['president', 'A speedboat! Tiny. I have a much bigger boat. Huge boat.'] },
+      { col: 70, radio: ['hq', 'Long gap ahead. Use the floating crates.'] },
+      { col: 92, radio: ['president', 'I can see the booth. Terrible architecture. Who designed that?'] },
+    ],
+    bossIntro: [
+      ['toll', 'HALT! Toll is two million dollars. Per ship. Per person. Per wave.'],
+      ['hero', 'I\'m one guy. On foot.'],
+      ['toll', 'Then it\'s two million per foot. Cash or card?'],
+      ['president', 'Sergeant, I don\'t PAY tolls. I OWN tolls. Shoot when the window opens!', 'rambo'],
+    ],
+    bossPhases: [
+      { price: 4, radio: ['toll', 'Inflation! It\'s four million now!'] },
+      { price: 1, radio: ['toll', 'Okay, okay, discount! One million!'] },
+      { price: 0, radio: ['toll', 'FREE! It\'s free! Please stop shooting!'] },
+    ],
+    outro: [
+      ['hq', 'The strait is open. Tankers are moving again.'],
+      ['president', 'I\'m putting my name on that booth. GOLD TOLL. Free for everyone. Almost free.', 'happy'],
+      ['hero', 'Sir, the booth is at the bottom of the sea.'],
+      ['president', 'Then it\'s the deepest toll in history. Incredible depth.', 'happy'],
+    ],
+  },
 
   // ------------------------------------------------------------------ 6
   {
