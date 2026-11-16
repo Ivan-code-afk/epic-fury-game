@@ -20,6 +20,26 @@ Open `index.html` in a browser. It also works on GitHub Pages (Settings → Page
 
 Down + jump drops through a platform.
 
+## Difficulty
+Pick EASY / NORMAL / HARD with ◀ ▶ on the mission select screen (tap the line on phones). The choice is saved.
+
+| | Easy | Normal | Hard |
+|---|---|---|---|
+| Hearts | 7 | 5 | 4 |
+| Lives | 5 | 3 | 2 |
+| Enemy fire rate | ×0.65 | ×1 | ×1.35 |
+| Enemy health | ×0.8 | ×1 | ×1.3 |
+| Mission timers | ×1.3 | ×1 | ×0.8 |
+
+Each mission also has its own `heat` (enemy fire-rate multiplier) so the campaign ramps up; partner missions use `allyPower` to keep partners from carrying the player. Values live in `src/config.js` and `src/missions.js`.
+
+### Balance bot
+`tools/bot.js` + `tools/balance.py` play every mission with a scripted bot and report hits taken per screen, where it got hit most, and how far it got. `tools/bossbal.py` does the same for the two boss fights. Requires Python Playwright and Chrome:
+```
+python3 tools/balance.py 3 normal     # 3 runs per mission
+python3 tools/bossbal.py hard
+```
+
 ## Project layout
 ```
 index.html        — canvas and touch buttons

@@ -250,7 +250,7 @@
           b.color = this.type === 'president' ? '#ffd23f' : '#9ff';
           g.bullets.push(b);
           G.Audio.play('shoot');
-          this.fireCd = this.type === 'president' ? (this.rambo ? 0.12 : 0.7) : 0.35;
+          this.fireCd = (this.type === 'president' ? (this.rambo ? 0.12 : 0.7) : 0.35) / (g.mission.allyPower || 1);
         }
       }
       // Агент Ави подсвечивает спрятанные пусковые рядом
@@ -312,7 +312,7 @@
       const sees = Math.abs(dx) < 200 && Math.abs(dy) < 50 && !p.dead;
       if (sees) {
         this.facing = Math.sign(dx) || -1; this.vx = 0;
-        this.fireCd -= dt;
+        this.fireCd -= dt * g.heat;
         if (this.fireCd <= 0) {
           if (this.rpg) {
             this.fireCd = 2.6 + Math.random();
@@ -359,7 +359,7 @@
       const p = g.player;
       if (Math.abs(cx(p) - cx(this)) > 260 || p.dead) return;
       this.facing = Math.sign(cx(p) - cx(this)) || -1;
-      this.fireCd -= dt;
+      this.fireCd -= dt * g.heat;
       if (this.fireCd <= 0) {
         if (this.burst <= 0) this.burst = 3;
         this.burst--; this.fireCd = this.burst > 0 ? 0.15 : 2.2;
@@ -485,7 +485,7 @@
       if (Math.random() < 0.3) g.particles.push(new G.Particle(this.facing > 0 ? this.x : this.x + this.w, this.y + 14, -this.facing * 30, -20, 0.4, '#e8f4ff', 2, 0.5));
       const p = g.player;
       if (p.dead || Math.abs(cx(p) - cx(this)) > 230) return;
-      this.fireCd -= dt;
+      this.fireCd -= dt * g.heat;
       if (this.fireCd <= 0) {
         if (this.burst <= 0) this.burst = 2;
         this.burst--; this.fireCd = this.burst > 0 ? 0.18 : 1.7;
@@ -513,7 +513,7 @@
       if (this.dead) { g.explode(cx(this), cy(this), 26, 'player', 4); this.remove = true; return; }
       if (this.y >= this.surface && this.vy >= 0) {
         this.y = this.surface + Math.sin(this.t * 3) * 1.5; this.vy = 0;
-        this.jumpT -= dt;
+        this.jumpT -= dt * g.heat;
         if (this.jumpT <= 0 && Math.abs(cx(g.player) - cx(this)) < 160) { this.vy = -300 - Math.random() * 80; this.jumpT = 2 + Math.random() * 1.5; G.Audio.play('jump'); }
       } else { this.vy += C.GRAVITY * 0.8 * dt; this.y += this.vy * dt; }
       if (!g.player.dead && overlap(this, g.player)) {
@@ -563,7 +563,7 @@
       if (this.cycleT <= 0) { this.open = !this.open; this.cycleT = this.open ? 2.6 : 1.6 - this.phase * 0.2; }
       const rage = 1 + this.phase * 0.3;
       // счета-купюры по дуге
-      this.billCd -= dt * rage;
+      this.billCd -= dt * rage * g.heat;
       if (this.billCd <= 0 && !p.dead) {
         this.billCd = 1.4;
         const n = this.phase >= 2 ? 3 : 1;
@@ -575,7 +575,7 @@
         }
       }
       // вызывает дроны
-      this.droneCd -= dt;
+      this.droneCd -= dt * g.heat;
       if (this.droneCd <= 0) {
         this.droneCd = Math.max(3.5, 8 - this.phase * 1.5);
         g.entities.push(new G.Drone(this.x + 20, this.y - 10, 55 + this.phase * 8));
@@ -791,7 +791,7 @@
     Object.assign(this, { kind: 'laser', x: col * T + 7, y: top * T, w: 2, h: (bot - top + 1) * T, t: (col * 0.37) % 3 });
   };
   G.Laser.prototype = {
-    state() { const p = this.t % 3; return p < 1.4 ? 'on' : p > 2.55 ? 'warn' : 'off'; },
+    state() { const p = this.t % 3; return p < (this.onTime || 1.4) ? 'on' : p > 2.55 ? 'warn' : 'off'; },
     update(dt, g) {
       this.t += dt;
       if (this.state() === 'on' && !g.player.dead && overlap(this, g.player)) g.player.hurt(g, 1);
@@ -1002,10 +1002,10 @@
       if (this.dead) { g.explode(cx(this), cy(this), 22, 'none'); this.remove = true; return; }
       const p = g.player;
       if (p.dead || this.x > g.camX + C.W + 10 || this.x < g.camX - 30) return;
-      this.fireCd -= dt;
+      this.fireCd -= dt * g.heat;
       if (this.fireCd <= 0) {
-        if (this.burst <= 0) this.burst = 3;
-        this.burst--; this.fireCd = this.burst > 0 ? 0.12 : 1.5;
+        if (this.burst <= 0) this.burst = 2;
+        this.burst--; this.fireCd = this.burst > 0 ? 0.14 : 1.6;
         const ang = Math.atan2(cy(p) - this.y, cx(p) + 40 - cx(this)) + (Math.random() - 0.5) * 0.15;
         g.bullets.push(new G.Bullet(cx(this), this.y + 4, Math.cos(ang) * 175, Math.sin(ang) * 175, 'enemy', 1));
         G.Audio.play('shoot');
@@ -1025,8 +1025,8 @@
       this.flash -= dt;
       if (this.dead) { g.explode(cx(this), cy(this), 30, 'none'); this.remove = true; return; }
       if (g.player.dead || this.x > g.camX + C.W - 10 || this.x < g.camX) return;
-      this.fireCd -= dt;
-      if (this.fireCd <= 0) { this.fireCd = 4; g.entities.push(new G.SamMissile(this.x + 20, this.y)); G.Audio.play('rocket'); }
+      this.fireCd -= dt * g.heat;
+      if (this.fireCd <= 0) { this.fireCd = 5; g.entities.push(new G.SamMissile(this.x + 20, this.y)); G.Audio.play('rocket'); }
     },
     draw(ctx, camX) {
       let img = G.SPR.sam; if (this.flash > 0) img = G.tintCache(img, '#fff');
@@ -1043,7 +1043,7 @@
       const want = Math.atan2(cy(p) - cy(this), cx(p) - cx(this));
       let da = want - this.ang; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
       this.ang += Math.max(-2.2 * dt, Math.min(2.2 * dt, da));
-      this.speed = Math.min(170, this.speed + 60 * dt);
+      this.speed = Math.min(150, this.speed + 50 * dt);
       this.x += Math.cos(this.ang) * this.speed * dt; this.y += Math.sin(this.ang) * this.speed * dt;
       if (Math.random() < 0.7) g.particles.push(new G.Particle(cx(this), cy(this), 0, 0, 0.5, '#bbb', 3, -0.05));
       if (!p.dead && overlap(this, p)) { this.remove = true; this.dead = true; g.explode(cx(this), cy(this), 18, 'enemy', 2); }
@@ -1083,7 +1083,7 @@
   });
 
   // Голограмма: идёт на героя и стреляет; держит щит босса
-  G.Hologram = function (x, y) { Enemy.call(this, { kind: 'hologram', x, y, w: 14, h: 24, hp: 2, score: 150, facing: -1, fireCd: 1 + Math.random(), t: Math.random() * 6 }); };
+  G.Hologram = function (x, y) { Enemy.call(this, { kind: 'hologram', x, y, w: 14, h: 24, hp: 3, score: 150, facing: -1, fireCd: 1 + Math.random(), t: Math.random() * 6 }); };
   G.Hologram.prototype = Object.create(Enemy.prototype);
   Object.assign(G.Hologram.prototype, {
     kill(g) {
@@ -1098,11 +1098,11 @@
       this.vx = Math.abs(dx) > 70 ? this.facing * 35 : 0;
       this.vy = Math.min(this.vy + C.GRAVITY * dt, 520);
       g.level.move(this, dt);
-      this.fireCd -= dt;
+      this.fireCd -= dt * g.heat;
       if (this.fireCd <= 0 && !p.dead) {
-        this.fireCd = 1.8 + Math.random();
+        this.fireCd = 2.4 + Math.random();
         const ang = Math.atan2(cy(p) - (this.y + 10), dx);
-        const b = new G.Bullet(cx(this), this.y + 10, Math.cos(ang) * 130, Math.sin(ang) * 130, 'enemy', 1); b.color = '#60e0ff';
+        const b = new G.Bullet(cx(this), this.y + 10, Math.cos(ang) * 110, Math.sin(ang) * 110, 'enemy', 1); b.color = '#60e0ff';
         g.bullets.push(b);
       }
     },
@@ -1118,7 +1118,7 @@
   // ФИНАЛЬНЫЙ БОСС: бункер-телестудия «Аятоллы-невидимки». Пока живы голограммы — щит.
   G.BroadcastBoss = function (x, y) {
     Enemy.call(this, {
-      kind: 'boss', boss: true, x: x - 60, y: y + 16 - 84, w: 100, h: 84, hp: 60, maxHp: 60, active: false,
+      kind: 'boss', boss: true, x: x - 60, y: y + 16 - 84, w: 100, h: 84, hp: 140, maxHp: 140, active: false,
       phase: 0, exposedT: 0, waveCd: 0.5, turretCd: 1.2, rainCd: 1, talkCd: 2.5, deathT: 0, score: 10000, t: 0,
     });
   };
@@ -1150,10 +1150,10 @@
       } else if (!this.holoAlive(g)) {
         this.waveCd -= dt;
         if (this.waveCd <= 0) {
-          if (this.spawned) { this.exposedT = 4.5; this.spawned = false; G.Audio.play('alarm'); g.floatText(cx(this), this.y - 8, 'SIGNAL LOST!', '#ffd23f'); }
+          if (this.spawned) { this.exposedT = 3.5; this.spawned = false; G.Audio.play('alarm'); g.floatText(cx(this), this.y - 8, 'SIGNAL LOST!', '#ffd23f'); }
           else {
             this.spawned = true;
-            const n = 2 + Math.min(2, this.phase);
+            const n = 2 + Math.min(1, this.phase);
             for (let i = 0; i < n; i++) g.entities.push(new G.Hologram(this.x - 20 - i * 26, this.y + this.h - 24));
             G.Audio.play('blip');
           }
@@ -1161,7 +1161,7 @@
       }
       // турели (фаза 1+)
       if (this.phase >= 1) {
-        this.turretCd -= dt;
+        this.turretCd -= dt * g.heat;
         if (this.turretCd <= 0) {
           this.turretCd = 1.3;
           [this.y + 22, this.y + 60].forEach(ty => {
@@ -1172,7 +1172,7 @@
       }
       // дождь из картонных двойников (фаза 2+)
       if (this.phase >= 2) {
-        this.rainCd -= dt;
+        this.rainCd -= dt * g.heat;
         if (this.rainCd <= 0) {
           this.rainCd = 0.9;
           const b = new G.Bullet(g.camX + 20 + Math.random() * (this.x - g.camX - 40), 34, (Math.random() - 0.5) * 30, 0, 'enemy', 1);
@@ -1181,7 +1181,7 @@
       }
       // веер «записанных обращений» (фаза 3)
       if (this.phase >= 3) {
-        this.talkCd -= dt;
+        this.talkCd -= dt * g.heat;
         if (this.talkCd <= 0) {
           this.talkCd = 2.4;
           for (let i = -2; i <= 2; i++) {

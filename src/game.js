@@ -23,6 +23,8 @@
   const g = G.game = {
     state: 'title', time: 0, sel: 0, score: 0, shake: 0, radioQ: [], radioCur: null, texts: [],
 
+    setDifficulty(k) { if (C.difficulty[k]) { save.diff = k; persist(); } },
+
     // ---------- ЗАПУСК МИССИИ ----------
     startMission(i) {
       const m = G.MISSIONS[i];
@@ -34,9 +36,12 @@
       this.hostages = []; this.followers = []; this.alarmCount = 0;
       this.planted = false; this.escapeT = 0; this.rockT = 0;
       this.darkCanvas = null;
-      this.score = 0; this.lives = C.player.lives; this.thermal = false;
+      const diff = C.difficulty[save.diff || 'normal'] || C.difficulty.normal;
+      this.diff = diff; C.player.hp = diff.hp;
+      this.heat = diff.heat * (m.heat || 1);
+      this.score = 0; this.lives = diff.lives; this.thermal = false;
       this.firedTriggers = {}; this.radioQ = []; this.radioCur = null;
-      this.timer = m.objective.time || 0;
+      this.timer = (m.objective.time || 0) * diff.time;
       this.launchersLeft = 0; this.pending = null; this.waveIdx = -1; this.waveBreak = 2; this.spawnQ = [];
       let k = 0;
       for (const s of this.level.spawns) {
@@ -68,7 +73,7 @@
           case 'l': this.entities.push(new G.Searchlight(s.x, s.y)); break;
           case 'C': this.entities.push(new G.AtomCrate(s.x, s.y)); break;
           case 'F': this.entities.push(new G.Centrifuge(s.x, s.y)); break;
-          case 'W': this.entities.push(new G.Laser(s.x, s.y, this.level)); break;
+          case 'W': { const lz = new G.Laser(s.x, s.y, this.level); lz.onTime = 1.4 * Math.min(1.25, Math.sqrt(diff.heat)); this.entities.push(lz); break; }
           case 'I': this.entities.push(new G.Scientist(s.x, s.y)); break;
           case 'V': this.entities.push(new G.Cart(s.x, s.y)); break;
           case 'J': this.depot = new G.Depot(s.x, s.y); this.entities.push(this.depot); break;
@@ -80,6 +85,10 @@
         }
       }
       if (!this.player) this.player = new G.Player(32, 100);
+      for (const e of this.entities) {
+        if (!e.enemy || e.civilian || ['atomcrate', 'cutout', 'bars', 'truck'].includes(e.kind)) continue;
+        e.hp = Math.max(1, Math.round(e.hp * diff.enemyHp)); if (e.maxHp) e.maxHp = e.hp;
+      }
       this.strikes = m.objective.strikes || 0; this.strikeQ = [];
       this.hasBomb = false; this.bombCrate = null; this.geigerT = 0; this.exitNagT = 0;
       if (m.objective.type === 'search') {
@@ -131,7 +140,7 @@
     },
     plantCharge() {
       const o = this.mission.objective;
-      this.planted = true; this.escapeT = o.escape || 20; this.shake = 6;
+      this.planted = true; this.escapeT = (o.escape || 20) * this.diff.time; this.shake = 6;
       G.Audio.play('alarm');
       for (const [c, r] of this.mission.level.door || []) this.level.tiles[r][c] = '.';
       this.floatText(this.depot.x + 26, this.depot.y - 10, 'C4 PLANTED!', '#ff4040');
@@ -189,6 +198,10 @@
         if (l.price !== undefined) { b.price = l.price; this.floatText(b.x + b.w / 2, b.y - 10, '$' + l.price + ',000,000!', '#ffd23f'); }
       }
       this.shake = 6; G.Audio.play('alarm');
+      // аптечка на земле рядом с игроком после каждой фазы
+      const px = Math.max(16, Math.min(b.x - 40, this.player.x + (Math.random() - 0.5) * 80));
+      let py = 20; while (py < this.level.pxH && !this.level.solidAt(px + 6, py + 14)) py += 2;
+      if (py < this.level.pxH && !this.level.inWater({ x: px, y: py, w: 12, h: 14 })) this.entities.push(new G.Pickup('H', px, py));
     },
     targetHit() {
       const t = this.target; if (!t || t.hit) return;
@@ -269,7 +282,7 @@
         this.spawnQ[0].t -= dt;
         if (this.spawnQ[0].t <= 0) {
           const s = this.spawnQ.shift();
-          if (s.type === 'drone') this.entities.push(new G.Drone(this.level.pxW + 10, 24 + Math.random() * 90, s.speed));
+          if (s.type === 'drone') this.entities.push(new G.Drone(this.level.pxW + 10, 24 + Math.random() * 90, s.speed * Math.sqrt(this.heat)));
           else this.entities.push(new G.Soldier(this.level.pxW - 40, 9 * T));
         }
         return;
@@ -402,6 +415,11 @@
 
     updateSelect() {
       const I = G.Input, n = G.MISSIONS.length;
+      const keys = Object.keys(C.difficulty), di = Math.max(0, keys.indexOf(save.diff || 'normal'));
+      const setDiff = d => { save.diff = keys[(d + keys.length) % keys.length]; persist(); G.Audio.play('blip'); };
+      if (I.pressed('left')) setDiff(di - 1);
+      if (I.pressed('right')) setDiff(di + 1);
+      if (I.tapPos && I.tapPos.y > H - 26) { setDiff(di + 1); return; }
       if (I.pressed('down')) { this.sel = (this.sel + 1) % n; G.Audio.play('blip'); }
       if (I.pressed('up')) { this.sel = (this.sel + n - 1) % n; G.Audio.play('blip'); }
       if (I.tapPos) {
@@ -621,11 +639,14 @@
         if (on) { ctx.fillStyle = 'rgba(255,210,63,.18)'; ctx.fillRect(10, y - 2, W - 20, 12); }
         const col = m.playable ? (on ? '#ffd23f' : '#fff') : '#666';
         G.text(ctx, String(i + 1).padStart(2, ' ') + '. ' + m.title, 16, y, { size: 8, color: col });
-        const tag = !m.playable ? 'COMING SOON' : m.ally === 'president' ? '★ WITH THE PRESIDENT' : m.ally === 'mossad' ? '★ WITH MOSSAD' : (save[m.id] ? 'BEST ' + save[m.id] : '');
+        const tag = !m.playable ? 'COMING SOON' : Array.isArray(m.ally) ? '★ WITH PRESIDENT + MOSSAD' : m.ally === 'president' ? '★ WITH THE PRESIDENT' : m.ally === 'mossad' ? '★ WITH MOSSAD' : (save[m.id] ? 'BEST ' + save[m.id] : '');
         G.text(ctx, tag, W - 16, y, { size: 7, align: 'right', color: m.playable ? '#9fe870' : '#555' });
       });
       const m = G.MISSIONS[this.sel];
-      G.text(ctx, m.subtitle, W / 2, H - 14, { size: 7, align: 'center', color: '#aaa' });
+      G.text(ctx, m.subtitle, W / 2, H - 24, { size: 7, align: 'center', color: '#aaa' });
+      const d = C.difficulty[save.diff || 'normal'];
+      const dcol = { EASY: '#9fe870', NORMAL: '#ffd23f', HARD: '#ff5050' }[d.name];
+      G.text(ctx, '◀  DIFFICULTY: ' + d.name + '  ▶', W / 2, H - 12, { size: 8, align: 'center', color: dcol });
     },
   };
 

@@ -30,4 +30,11 @@ G.CONFIG = {
   },
 
   tieRage: { duration: 10 }, // «Галстук ярости» — бонус скорострельности
+
+  // Уровни сложности. heat — темп огня врагов, time — множитель таймеров миссий.
+  difficulty: {
+    easy:   { name: 'EASY',   heat: 0.65, hp: 7, lives: 5, enemyHp: 0.8, time: 1.3 },
+    normal: { name: 'NORMAL', heat: 1.0,  hp: 5, lives: 3, enemyHp: 1.0, time: 1.0 },
+    hard:   { name: 'HARD',   heat: 1.35, hp: 4, lives: 2, enemyHp: 1.3, time: 0.8 },
+  },
 };

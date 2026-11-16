@@ -118,7 +118,16 @@ G.Level.prototype = {
     if (this.at(tx, ty) !== 'x') return false;
     const k = tx + ',' + ty;
     this.crateHp[k] = (this.crateHp[k] ?? 4) - dmg;
-    if (this.crateHp[k] <= 0) { this.tiles[ty][tx] = '.'; return 'broken'; }
+    if (this.crateHp[k] <= 0) {
+      this.tiles[ty][tx] = '.';
+      // ящики сверху падают вниз, чтобы не висели в воздухе
+      for (let y = ty - 1; y >= 0 && this.tiles[y][tx] === 'x'; y--) {
+        let ny = y;
+        while (ny + 1 < this.h && this.tiles[ny + 1][tx] === '.') ny++;
+        if (ny !== y) { this.tiles[ny][tx] = 'x'; this.tiles[y][tx] = '.'; this.crateHp[tx + ',' + ny] = this.crateHp[tx + ',' + y]; delete this.crateHp[tx + ',' + y]; }
+      }
+      return 'broken';
+    }
     return true;
   },
 

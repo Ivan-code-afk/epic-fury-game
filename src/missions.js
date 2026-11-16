@@ -13,13 +13,13 @@ const R = (ch, n) => ch.repeat(n);
 G.MISSIONS = [
   // ------------------------------------------------------------------ 1
   {
-    id: 'landing', title: 'HORMUZ LANDING', subtitle: 'Training. Take the beachhead.', theme: 'gulf', playable: true,
+    id: 'landing', title: 'HORMUZ LANDING', subtitle: 'Training. Take the beachhead.', theme: 'gulf', playable: true, heat: 0.7,
     objective: { type: 'reach' },
     level: {
       ground: '#',
       terrain: R('3', 20) + R('_', 3) + R('3', 15) + R('4', 8) + R('5', 8) + R('3', 6) + R(' ', 3) + R('3', 20) + R('4', 6) + R('3', 10) + R('_', 2) + R('3', 29),
       platforms: [[27, 6, 4], [66, 7, 5], [72, 5, 4], [92, 6, 5], [104, 7, 4]],
-      blocks: [[35, 9, 'b'], [42, 7, 'x'], [43, 7, 'x'], [42, 6, 'x'], [80, 9, 'x'], [81, 9, 'x'], [109, 9, 'b'], [110, 9, 'b']],
+      blocks: [[35, 9, 'b'], [42, 8, 'x'], [43, 8, 'x'], [42, 7, 'x'], [80, 9, 'x'], [81, 9, 'x'], [109, 9, 'b'], [110, 9, 'b']],
       objects: 'P2 S14 S31 H28:5 S45 T50 S57 M68:6 S70 G73:4 S78 S86 T96 Y94:5 S106 S113 H105:6 S118 T123 E127',
     },
     intro: [
@@ -43,7 +43,7 @@ G.MISSIONS = [
 
   // ------------------------------------------------------------------ 2
   {
-    id: 'swarm', title: 'SHAHED SWARM', subtitle: 'Defend the Gulf base.', theme: 'gulf', playable: true,
+    id: 'swarm', title: 'SHAHED SWARM', subtitle: 'Defend the Gulf base.', theme: 'gulf', playable: true, heat: 0.9,
     objective: {
       type: 'defend', baseHp: 24,
       waves: [
@@ -83,7 +83,7 @@ G.MISSIONS = [
 
   // ------------------------------------------------------------------ 3
   {
-    id: 'trucks', title: 'SURPRISE TRUCKS', subtitle: 'Find the launchers among the vans.', theme: 'city', playable: true,
+    id: 'trucks', title: 'SURPRISE TRUCKS', subtitle: 'Find the launchers among the vans.', theme: 'city', playable: true, heat: 0.9,
     objective: { type: 'launchers', time: 180 },
     level: {
       ground: '#',
@@ -111,7 +111,7 @@ G.MISSIONS = [
 
   // ------------------------------------------------------------------ 4
   {
-    id: 'escort', title: 'PRESIDENTIAL ESCORT', subtitle: 'President Gold goes into battle himself.', theme: 'desert', playable: true,
+    id: 'escort', title: 'PRESIDENTIAL ESCORT', subtitle: 'President Gold goes into battle himself.', theme: 'desert', playable: true, heat: 1.15,
     ally: 'president',
     objective: { type: 'reach' },
     allyBarks: [
@@ -128,7 +128,7 @@ G.MISSIONS = [
       ground: '#',
       terrain: R('3', 25) + R('4', 10) + R('5', 6) + R('3', 15) + R('_', 3) + R('3', 18) + R('4', 8) + R('6', 5) + R('4', 6) + R('3', 54),
       platforms: [[16, 6, 4], [46, 4, 4], [58, 7, 3], [62, 7, 3], [78, 5, 5], [107, 7, 5], [120, 6, 4]],
-      blocks: [[22, 9, 'b'], [53, 9, 'x'], [54, 9, 'x'], [73, 9, 'b'], [101, 7, 'x'], [113, 9, 'b'], [114, 9, 'b']],
+      blocks: [[22, 9, 'b'], [53, 9, 'x'], [54, 9, 'x'], [73, 9, 'b'], [101, 9, 'x'], [113, 9, 'b'], [114, 9, 'b']],
       objects: 'P3 A1 S18 S24 H17:5 S30 T38 S44 G47:3 S50 S55 S68 T76 S80 M79:4 S86 S90 S95 Y98:4 T104 S110 S116 H121:5 S124 S130 T134 S138 E146',
     },
     intro: [
@@ -152,7 +152,7 @@ G.MISSIONS = [
 
   // ------------------------------------------------------------------ 5
   {
-    id: 'toll', title: 'THE $2 MILLION TOLLBOOTH', subtitle: 'Hop the ships across the strait. Shut down the toll.', theme: 'gulf', playable: true,
+    id: 'toll', title: 'THE $2 MILLION TOLLBOOTH', subtitle: 'Hop the ships across the strait. Shut down the toll.', theme: 'gulf', playable: true, heat: 1.0,
     objective: { type: 'boss', bossName: 'TOLL COLLECTOR' },
     level: {
       ground: 'd',
@@ -195,7 +195,7 @@ G.MISSIONS = [
 
   // ------------------------------------------------------------------ 6
   {
-    id: 'mossad', title: 'MOSSAD SHADOW', subtitle: 'Night raid with Agent Avi.', theme: 'night', playable: true,
+    id: 'mossad', title: 'MOSSAD SHADOW', subtitle: 'Night raid with Agent Avi.', theme: 'night', playable: true, heat: 1.3, allyPower: 0.7,
     ally: 'mossad',
     objective: { type: 'launchers', time: 210 },
     allyBarks: [
@@ -210,7 +210,7 @@ G.MISSIONS = [
       ground: 'r',
       terrain: R('3', 22) + R('4', 12) + R('3', 10) + R(' ', 3) + R('3', 24) + R('5', 6) + R('3', 20) + R('4', 14) + R('3', 30),
       platforms: [[14, 6, 4], [42, 7, 4], [48, 7, 4], [69, 5, 4], [96, 6, 5], [126, 6, 4]],
-      blocks: [[30, 8, 'b'], [56, 9, 'x'], [86, 9, 'b'], [110, 8, 'x'], [111, 8, 'x']],
+      blocks: [[30, 8, 'b'], [56, 9, 'x'], [86, 9, 'b'], [110, 8, 'x'], [111, 9, 'x']],
       objects: 'P3 A6 S16 K12 L26 S33 T38 K52 S58 G60 L64 S68 H70:4 K80 S88 T92 S98 K102 L108 Y97:5 S116 K120 S124 L132 S138 H136',
     },
     intro: [
@@ -232,13 +232,13 @@ G.MISSIONS = [
 
   // ------------------------------------------------------------------ 7-12
   {
-    id: 'larak', title: 'LARAK ISLAND', subtitle: 'Armored launchers on the island. Call in HIMARS.', theme: 'gulf', playable: true,
+    id: 'larak', title: 'LARAK ISLAND', subtitle: 'Armored launchers on the island. Call in HIMARS.', theme: 'gulf', playable: true, heat: 1.1,
     objective: { type: 'launchers', time: 240, special: 'himars', strikes: 3 },
     level: {
       ground: '#',
       terrain: R('3', 18) + R('4', 8) + R('5', 10) + R('6', 8) + R('4', 12) + R(' ', 3) + R('4', 14) + R('5', 12) + R('3', 16) + R('_', 3) + R('3', 20) + R('5', 10) + R('4', 16),
       platforms: [[30, 5, 4], [64, 6, 4], [90, 7, 5], [114, 7, 4], [137, 6, 4]],
-      blocks: [[24, 8, 'b'], [46, 8, 'x'], [47, 8, 'x'], [82, 7, 'b'], [109, 9, 'x'], [128, 6, 'b']],
+      blocks: [[24, 8, 'b'], [46, 8, 'x'], [47, 8, 'x'], [82, 7, 'b'], [109, 9, 'x'], [128, 7, 'b']],
       objects: 'P2 R6 S12 Q20 S27 U32 T40 S49 H52 S62 Q66 U70 S76 T80 G91:6 S88 U94 Q98 R106 S108 S112 M115:6 U120 T126 Q130 H136 S138 U142 R139:5',
     },
     intro: [
@@ -259,7 +259,7 @@ G.MISSIONS = [
     ],
   },
   {
-    id: 'missilecity', title: 'MISSILE CITY', subtitle: 'Tunnels, rail carts, a depot to blow. Then run.', theme: 'tunnel', playable: true,
+    id: 'missilecity', title: 'MISSILE CITY', subtitle: 'Tunnels, rail carts, a depot to blow. Then run.', theme: 'tunnel', playable: true, heat: 1.3,
     objective: { type: 'demolish', escape: 20 },
     dark: 0.86,
     level: {
@@ -298,7 +298,7 @@ G.MISSIONS = [
     ],
   },
   {
-    id: 'nuke', title: 'FIND THE BOMB', subtitle: 'One of the PEACEFUL ATOM crates is not so peaceful.', theme: 'lab', playable: true,
+    id: 'nuke', title: 'FIND THE BOMB', subtitle: 'One of the PEACEFUL ATOM crates is not so peaceful.', theme: 'lab', playable: true, heat: 1.05,
     objective: { type: 'search', minCol: 40 },
     level: {
       ground: 'c',
@@ -337,7 +337,7 @@ G.MISSIONS = [
     ],
   },
   {
-    id: 'hostages', title: 'FORGOTTEN HOSTAGES', subtitle: 'Night raid on a prison. Five hostages. Bring them home.', theme: 'night', playable: true,
+    id: 'hostages', title: 'FORGOTTEN HOSTAGES', subtitle: 'Night raid on a prison. Five hostages. Bring them home.', theme: 'night', playable: true, heat: 1.2,
     objective: { type: 'rescue', min: 3 },
     chopper: true,
     level: {
@@ -378,7 +378,7 @@ G.MISSIONS = [
     ],
   },
   {
-    id: 'lucas', title: 'SHAHED IN REVERSE', subtitle: 'Fly the American LUCAS drone to the factory that designed it.', theme: 'desert', playable: true,
+    id: 'lucas', title: 'SHAHED IN REVERSE', subtitle: 'Fly the American LUCAS drone to the factory that designed it.', theme: 'desert', playable: true, heat: 0.7,
     objective: { type: 'flight', speed: 45 },
     level: {
       ground: 'r',
@@ -408,7 +408,7 @@ G.MISSIONS = [
     ],
   },
   {
-    id: 'final', title: 'THE INVISIBLE AYATOLLAH', subtitle: 'Finale. Nobody has seen him. Time to find out why.', theme: 'city', playable: true,
+    id: 'final', title: 'THE INVISIBLE AYATOLLAH', subtitle: 'Finale. Nobody has seen him. Time to find out why.', theme: 'city', playable: true, heat: 1.35, allyPower: 0.4,
     ally: ['president', 'mossad'],
     objective: { type: 'boss', boss: 'broadcast', bossName: 'THE INVISIBLE AYATOLLAH', goal: 'TAKE DOWN THE BROADCAST →' },
     bossReveal: true,
@@ -420,7 +420,7 @@ G.MISSIONS = [
       ground: '#',
       terrain: R('3', 30) + R('4', 12) + R('3', 20) + R('5', 8) + R('3', 18) + R('_', 3) + R('3', 24) + R('4', 10) + R('3', 45),
       platforms: [[20, 6, 4], [48, 6, 5], [74, 6, 4], [100, 5, 5], [118, 6, 4], [138, 7, 4], [146, 5, 4]],
-      blocks: [[26, 9, 'b'], [44, 8, 'x'], [45, 8, 'x'], [84, 9, 'b'], [108, 9, 'x'], [128, 9, 'b']],
+      blocks: [[26, 9, 'b'], [44, 9, 'x'], [45, 9, 'x'], [84, 9, 'b'], [108, 9, 'x'], [128, 9, 'b']],
       objects: 'P4 A2 S14 n18 S24 n28 Q34 g38 S46 n50 T56 D60:3 S66 n72 S78 Q82 H76:5 g86 S94 n98 T104 Q102:4 S110 n113 g118 S122 Y120:5 n126 H130 G132 M134 Z163',
     },
     intro: [
