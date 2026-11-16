@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Операция «Эпическая ярость»</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; touch-action: none; }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; background: #000; }
+  #touch { position: fixed; inset: 0; pointer-events: none; display: none; }
+  #touch.on { display: block; }
+  .tb { position: absolute; pointer-events: auto; width: 64px; height: 64px; border-radius: 50%;
+        background: rgba(255,255,255,.14); border: 2px solid rgba(255,255,255,.35); color: #fff;
+        font: bold 16px monospace; display: flex; align-items: center; justify-content: center;
+        user-select: none; -webkit-user-select: none; }
+  .tb.act { background: rgba(255,80,60,.45); }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="screen"></canvas></div>
+<div id="touch">
+  <div class="tb" data-k="left"  style="left:14px;  bottom:70px">◀</div>
+  <div class="tb" data-k="right" style="left:120px; bottom:70px">▶</div>
+  <div class="tb" data-k="up"    style="left:67px;  bottom:124px">▲</div>
+  <div class="tb" data-k="down"  style="left:67px;  bottom:16px">▼</div>
+  <div class="tb" data-k="jump"  style="right:14px;  bottom:40px">A</div>
+  <div class="tb" data-k="fire"  style="right:92px;  bottom:70px">B</div>
+  <div class="tb" data-k="grenade" style="right:14px; bottom:118px">G</div>
+  <div class="tb" data-k="special" style="right:92px; bottom:148px">V</div>
+  <div class="tb" data-k="start" style="left:50%; top:10px; width:56px; height:36px; border-radius:10px; transform:translateX(-50%)">II</div>
+</div>
+<script src="src/config.js"></script>
+<script src="src/input.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/sprites.js"></script>
+<script src="src/level.js"></script>
+<script src="src/entities.js"></script>
+<script src="src/dialog.js"></script>
+<script src="src/missions.js"></script>
+<script src="src/game.js"></script>
+</body>
+</html>
